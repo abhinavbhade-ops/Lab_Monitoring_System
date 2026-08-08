@@ -1,17 +1,3 @@
-# [Project Title]
-
-**Team ID:** CX025
-**Team Name:** Alpha Bugbusters
-
-## Team Members
-- [Member 1 Name] – [Role]
-- [Member 2 Name] – [Role]
-- [Member 3 Name] – [Role]
-- [Member 4 Name] – [Role]
-
-## Problem Statement
-[Describe the problem statement your team is solving]
-
 ## Tech Stack
 - Frontend: React (Vite)
 - Backend: FastAPI (Python)
@@ -52,6 +38,3 @@ npm run dev
 cd backend
 uvicorn src.main:app --reload
 ```
-
-> This README is a shared template for all CODEX Hackfest 2026 teams.
-> Fill in the bracketed placeholders above with your project's real details.
