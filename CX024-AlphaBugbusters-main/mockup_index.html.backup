@@ -1,0 +1,2015 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Lab Infrastructure Monitoring Dashboard</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-deep: #e0f2fe;
+            --bg-main: #f0f9ff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f8fafc;
+            --border: #e2e8f0;
+            --border-light: #cbd5e1;
+            --fg: #0f172a;
+            --fg-muted: #475569;
+            --fg-dim: #64748b;
+            --accent: #0ea5e9;
+            --accent-glow: rgba(14, 165, 233, 0.15);
+            --accent-dim: rgba(14, 165, 233, 0.08);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.15);
+            --warning: #f97316;
+            --warning-glow: rgba(249, 115, 22, 0.15);
+            --info: #3b82f6;
+            --info-glow: rgba(59, 130, 246, 0.12);
+            --offline: #94a3b8;
+            --radius: 10px;
+            --radius-sm: 6px;
+            --radius-lg: 14px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-deep);
+            color: var(--fg);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-deep);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--fg-dim);
+        }
+
+        /* Background atmosphere */
+        .bg-atmosphere {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                radial-gradient(ellipse 600px 400px at 15% 20%, rgba(14, 165, 233, 0.06) 0%, transparent 70%),
+                radial-gradient(ellipse 500px 500px at 85% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 70%),
+                radial-gradient(ellipse 400px 300px at 50% 50%, rgba(14, 165, 233, 0.04) 0%, transparent 70%);
+        }
+
+        /* Layout */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            min-height: 100vh;
+            background: var(--bg-main);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), #0284c7);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.25);
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--fg);
+            letter-spacing: -0.3px;
+        }
+
+        .brand-sub {
+            font-size: 11px;
+            color: var(--fg-dim);
+            margin-top: 2px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .nav-section-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--fg-dim);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            padding: 16px 12px 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            color: var(--fg-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13.5px;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: var(--accent-dim);
+            color: var(--fg);
+        }
+
+        .nav-item.active {
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 0 3px 3px 0;
+        }
+
+        .nav-item i {
+            width: 18px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--danger);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .sidebar-footer {
+            padding: 16px 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .lab-selector {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            color: var(--fg);
+            font-size: 13px;
+            font-family: 'Space Grotesk', sans-serif;
+            width: 100%;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237a8bb5' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+        }
+
+        .lab-selector:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Main */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Top bar */
+        .topbar {
+            height: 64px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 28px;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .topbar-search {
+            flex: 1;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .topbar-search i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--fg-dim);
+            font-size: 13px;
+        }
+
+        .topbar-search input {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 9px 14px 9px 38px;
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            transition: border-color 0.2s;
+        }
+
+        .topbar-search input::placeholder {
+            color: var(--fg-dim);
+        }
+
+        .topbar-search input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .topbar-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--fg-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            font-size: 14px;
+        }
+
+        .topbar-btn:hover {
+            background: var(--bg-card-hover);
+            color: var(--fg);
+            border-color: var(--border-light);
+        }
+
+        .topbar-btn .notif-dot {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            border: 2px solid var(--bg-card);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 8px;
+            padding-left: 16px;
+            border-left: 1px solid var(--border);
+            cursor: pointer;
+        }
+
+        .user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--accent), #0284c7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--fg);
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: var(--fg-dim);
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            background: rgba(14, 165, 233, 0.08);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse-live 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-live {
+
+            0%,
+            100% {
+                opacity: 1;
+                box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.5);
+            }
+
+            50% {
+                opacity: 0.6;
+                box-shadow: 0 0 0 5px rgba(14, 165, 233, 0);
+            }
+        }
+
+        /* Content area */
+        .content-area {
+            flex: 1;
+            padding: 24px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Page header */
+        .page-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+        }
+
+        .page-title {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--fg);
+        }
+
+        .page-subtitle {
+            font-size: 13px;
+            color: var(--fg-muted);
+            margin-top: 4px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 9px 18px;
+            border-radius: var(--radius-sm);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.2);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--fg-muted);
+            border-color: var(--border);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-card);
+            color: var(--fg);
+        }
+
+        /* Stat cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+        }
+
+        .stat-card.accent::before {
+            background: linear-gradient(90deg, var(--accent), transparent);
+        }
+
+        .stat-card.info::before {
+            background: linear-gradient(90deg, var(--info), transparent);
+        }
+
+        .stat-card.danger::before {
+            background: linear-gradient(90deg, var(--danger), transparent);
+        }
+
+        .stat-card.warning::before {
+            background: linear-gradient(90deg, var(--warning), transparent);
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            margin-bottom: 14px;
+        }
+
+        .stat-card.accent .stat-icon {
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .stat-card.info .stat-icon {
+            background: var(--info-glow);
+            color: var(--info);
+        }
+
+        .stat-card.danger .stat-icon {
+            background: var(--danger-glow);
+            color: var(--danger);
+        }
+
+        .stat-card.warning .stat-icon {
+            background: var(--warning-glow);
+            color: var(--warning);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--fg-dim);
+            font-weight: 500;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 30px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: -1px;
+            line-height: 1;
+        }
+
+        .stat-card.accent .stat-value {
+            color: var(--accent);
+        }
+
+        .stat-card.info .stat-value {
+            color: var(--info);
+        }
+
+        .stat-card.danger .stat-value {
+            color: var(--danger);
+        }
+
+        .stat-card.warning .stat-value {
+            color: var(--warning);
+        }
+
+        .stat-change {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-change.up {
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .stat-change.down {
+            background: var(--danger-glow);
+            color: var(--danger);
+        }
+
+        .stat-sparkline {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 100px;
+            height: 40px;
+            opacity: 0.3;
+        }
+
+        /* Main grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--fg);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title i {
+            color: var(--fg-dim);
+            font-size: 13px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .card-tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-deep);
+            padding: 3px;
+            border-radius: var(--radius-sm);
+        }
+
+        .card-tab {
+            padding: 5px 14px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--fg-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .card-tab.active {
+            background: var(--bg-card);
+            color: var(--fg);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-tab:hover:not(.active) {
+            color: var(--fg-muted);
+        }
+
+        /* Computer grid */
+        .pc-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .pc-node {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .pc-node:hover {
+            border-color: var(--border-light);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .pc-node.online {
+            border-left: 3px solid var(--accent);
+        }
+
+        .pc-node.offline {
+            border-left: 3px solid var(--offline);
+        }
+
+        .pc-node.warning {
+            border-left: 3px solid var(--warning);
+        }
+
+        .pc-node.critical {
+            border-left: 3px solid var(--danger);
+        }
+
+        .pc-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .pc-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--fg);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .pc-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .pc-node.online .pc-status-dot {
+            background: var(--accent);
+            box-shadow: 0 0 6px rgba(14, 165, 233, 0.5);
+        }
+
+        .pc-node.offline .pc-status-dot {
+            background: var(--offline);
+        }
+
+        .pc-node.warning .pc-status-dot {
+            background: var(--warning);
+            box-shadow: 0 0 6px rgba(249, 115, 22, 0.5);
+        }
+
+        .pc-node.critical .pc-status-dot {
+            background: var(--danger);
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+            animation: pulse-dot 2s infinite;
+        }
+
+        .pc-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .pc-metric {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pc-metric-label {
+            font-size: 10px;
+            color: var(--fg-dim);
+            width: 28px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .pc-metric-bar {
+            flex: 1;
+            height: 4px;
+            background: var(--bg-card);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .pc-metric-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.6s ease;
+        }
+
+        .pc-node.offline .pc-metric-fill {
+            background: var(--offline) !important;
+        }
+
+        .pc-metric-fill.low {
+            background: var(--accent);
+        }
+
+        .pc-metric-fill.mid {
+            background: var(--warning);
+        }
+
+        .pc-metric-fill.high {
+            background: var(--danger);
+        }
+
+        .pc-metric-val {
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--fg-dim);
+            width: 30px;
+            text-align: right;
+        }
+
+        .pc-node.offline .pc-name,
+        .pc-node.offline .pc-metric-label,
+        .pc-node.offline .pc-metric-val {
+            opacity: 0.4;
+        }
+
+        /* Chart area */
+        .chart-container {
+            position: relative;
+            height: 200px;
+        }
+
+        /* Alerts panel */
+        .alert-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 440px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .alert-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .alert-item:hover {
+            border-color: var(--border-light);
+        }
+
+        .alert-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .alert-item.critical .alert-icon {
+            background: var(--danger-glow);
+            color: var(--danger);
+        }
+
+        .alert-item.warning .alert-icon {
+            background: var(--warning-glow);
+            color: var(--warning);
+        }
+
+        .alert-item.info .alert-icon {
+            background: var(--info-glow);
+            color: var(--info);
+        }
+
+        .alert-item.resolved .alert-icon {
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .alert-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .alert-title {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--fg);
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .alert-desc {
+            font-size: 11px;
+            color: var(--fg-dim);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .alert-time {
+            font-size: 10px;
+            color: var(--fg-dim);
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+            margin-top: 4px;
+        }
+
+        /* Bottom grid */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* Donut chart wrapper */
+        .donut-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .donut-canvas-wrap {
+            width: 120px;
+            height: 120px;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .donut-center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .donut-center-val {
+            font-size: 22px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--fg);
+            line-height: 1;
+        }
+
+        .donut-center-label {
+            font-size: 10px;
+            color: var(--fg-dim);
+            margin-top: 2px;
+        }
+
+        .donut-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--fg-muted);
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .legend-val {
+            margin-left: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--fg);
+            font-size: 12px;
+        }
+
+        /* Top usage table */
+        .usage-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .usage-table th {
+            text-align: left;
+            font-size: 10px;
+            color: var(--fg-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            padding: 0 0 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .usage-table td {
+            padding: 10px 0;
+            font-size: 12.5px;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .usage-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .usage-table .pc-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--fg);
+        }
+
+        .usage-table .usage-bar {
+            width: 80px;
+            height: 6px;
+            background: var(--bg-deep);
+            border-radius: 3px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        .usage-table .usage-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .usage-table .usage-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Activity feed */
+        .activity-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            position: relative;
+        }
+
+        .activity-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 36px;
+            bottom: -2px;
+            width: 1px;
+            background: var(--border);
+        }
+
+        .activity-dot {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .activity-dot.green {
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .activity-dot.red {
+            background: var(--danger-glow);
+            color: var(--danger);
+        }
+
+        .activity-dot.yellow {
+            background: var(--warning-glow);
+            color: var(--warning);
+        }
+
+        .activity-dot.blue {
+            background: var(--info-glow);
+            color: var(--info);
+        }
+
+        .activity-text {
+            font-size: 12px;
+            color: var(--fg-muted);
+            line-height: 1.5;
+        }
+
+        .activity-text strong {
+            color: var(--fg);
+            font-weight: 600;
+        }
+
+        .activity-time {
+            font-size: 10px;
+            color: var(--fg-dim);
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 2px;
+        }
+
+        /* Animations */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeUp 0.5s ease forwards;
+            opacity: 0;
+        }
+
+        .delay-1 {
+            animation-delay: 0.05s;
+        }
+
+        .delay-2 {
+            animation-delay: 0.1s;
+        }
+
+        .delay-3 {
+            animation-delay: 0.15s;
+        }
+
+        .delay-4 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-5 {
+            animation-delay: 0.25s;
+        }
+
+        .delay-6 {
+            animation-delay: 0.3s;
+        }
+
+        .delay-7 {
+            animation-delay: 0.35s;
+        }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .pc-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .bottom-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pc-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar-user .user-info {
+                display: none;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Tooltip */
+        .tooltip-wrap {
+            position: relative;
+        }
+
+        .tooltip-wrap:hover .tooltip-box {
+            opacity: 1;
+            transform: translateX(0) translateY(-50%);
+            pointer-events: auto;
+        }
+
+        .tooltip-box {
+            position: absolute;
+            left: calc(100% + 10px);
+            top: 50%;
+            transform: translateX(-6px) translateY(-50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            min-width: 180px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.2s ease;
+            z-index: 200;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg-atmosphere"></div>
+
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon"><i class="fas fa-microchip"></i></div>
+                <div class="brand-text">
+                    <span class="brand-title">LabMonitor</span>
+                    <span class="brand-sub">Infrastructure Dashboard</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">Main</div>
+                <div class="nav-item active"><i class="fas fa-th-large"></i> Dashboard</div>
+                <div class="nav-item"><i class="fas fa-desktop"></i> Computers</div>
+                <div class="nav-item"><i class="fas fa-network-wired"></i> Network</div>
+                <div class="nav-item">
+                    <i class="fas fa-bell"></i> Alerts
+                    <span class="nav-badge">5</span>
+                </div>
+
+                <div class="nav-section-label">Management</div>
+                <div class="nav-item"><i class="fas fa-door-open"></i> Labs</div>
+                <div class="nav-item"><i class="fas fa-users"></i> Users</div>
+                <div class="nav-item"><i class="fas fa-calendar-alt"></i> Schedules</div>
+                <div class="nav-item"><i class="fas fa-file-alt"></i> Reports</div>
+
+                <div class="nav-section-label">System</div>
+                <div class="nav-item"><i class="fas fa-cog"></i> Settings</div>
+                <div class="nav-item"><i class="fas fa-plug"></i> Integrations</div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <select class="lab-selector" aria-label="Select lab">
+                    <option>All Labs (48 PCs)</option>
+                    <option>Lab A - CS101 (20 PCs)</option>
+                    <option>Lab B - CS102 (16 PCs)</option>
+                    <option>Lab C - EC201 (12 PCs)</option>
+                </select>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <header class="topbar">
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    LIVE
+                </div>
+
+                <div class="topbar-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search computers, labs, alerts..." aria-label="Search">
+                </div>
+
+                <div class="topbar-actions">
+                    <button class="topbar-btn" aria-label="Refresh data" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="topbar-btn" aria-label="Notifications">
+                        <i class="fas fa-bell"></i>
+                        <span class="notif-dot"></span>
+                    </button>
+                    <button class="topbar-btn" aria-label="Fullscreen" onclick="toggleFullscreen()">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+
+                <div class="topbar-user">
+                    <div class="user-avatar">AK</div>
+                    <div class="user-info">
+                        <span class="user-name">Admin Kumar</span>
+                        <span class="user-role">System Administrator</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <main class="content-area">
+                <!-- Page Header -->
+                <div class="page-header animate-in">
+                    <div>
+                        <h1 class="page-title">Lab Infrastructure Overview</h1>
+                        <p class="page-subtitle">Real-time monitoring across 3 labs &middot; Last updated: <span
+                                id="lastUpdate">just now</span></p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-ghost"><i class="fas fa-download"></i> Export</button>
+                        <button class="btn btn-primary"><i class="fas fa-plus"></i> Add Computer</button>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card accent animate-in delay-1">
+                        <div class="stat-icon"><i class="fas fa-desktop"></i></div>
+                        <div class="stat-label">Total Computers</div>
+                        <div class="stat-value" id="statTotal">48</div>
+                        <div class="stat-change up"><i class="fas fa-arrow-up"></i> +4 this month</div>
+                    </div>
+                    <div class="stat-card info animate-in delay-2">
+                        <div class="stat-icon"><i class="fas fa-wifi"></i></div>
+                        <div class="stat-label">Online Now</div>
+                        <div class="stat-value" id="statOnline">41</div>
+                        <div class="stat-change up"><i class="fas fa-arrow-up"></i> 85.4% uptime</div>
+                    </div>
+                    <div class="stat-card danger animate-in delay-3">
+                        <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-label">Active Alerts</div>
+                        <div class="stat-value" id="statAlerts">5</div>
+                        <div class="stat-change down"><i class="fas fa-arrow-down"></i> +2 since 1h</div>
+                    </div>
+                    <div class="stat-card warning animate-in delay-4">
+                        <div class="stat-icon"><i class="fas fa-hdd"></i></div>
+                        <div class="stat-label">Avg Disk Usage</div>
+                        <div class="stat-value" id="statDisk">67%</div>
+                        <div class="stat-change down"><i class="fas fa-arrow-down"></i> 3% this week</div>
+                    </div>
+                </div>
+
+                <!-- Main Grid: PC Grid + Alerts -->
+                <div class="main-grid">
+                    <!-- PC Node Grid -->
+                    <div class="card animate-in delay-5">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-th"></i> Computer Nodes &mdash; Lab A (CS101)</div>
+                            <div class="card-tabs">
+                                <button class="card-tab active" onclick="switchLab('A', this)">Lab A</button>
+                                <button class="card-tab" onclick="switchLab('B', this)">Lab B</button>
+                                <button class="card-tab" onclick="switchLab('C', this)">Lab C</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="pc-grid" id="pcGrid">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerts Panel -->
+                    <div class="card animate-in delay-6">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-bell"></i> Active Alerts</div>
+                            <button class="btn btn-ghost" style="padding: 5px 12px; font-size: 11px;">View All</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert-list" id="alertList">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Grid: Charts + Table + Activity -->
+                <div class="bottom-grid">
+                    <!-- CPU Trend Chart -->
+                    <div class="card animate-in delay-5">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-chart-line"></i> CPU Usage Trend</div>
+                            <div class="card-tabs">
+                                <button class="card-tab active">1H</button>
+                                <button class="card-tab">6H</button>
+                                <button class="card-tab">24H</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="cpuChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resource Distribution -->
+                    <div class="card animate-in delay-6">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-chart-pie"></i> Resource Distribution</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="donut-wrapper">
+                                <div class="donut-canvas-wrap">
+                                    <canvas id="donutChart"></canvas>
+                                    <div class="donut-center">
+                                        <div class="donut-center-val" id="donutCenterVal">67%</div>
+                                        <div class="donut-center-label">Avg Load</div>
+                                    </div>
+                                </div>
+                                <div class="donut-legend">
+                                    <div class="legend-item">
+                                        <span class="legend-dot" style="background: var(--accent);"></span>
+                                        Normal (0-60%)
+                                        <span class="legend-val" id="legendNormal">28</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-dot" style="background: var(--warning);"></span>
+                                        Warning (60-85%)
+                                        <span class="legend-val" id="legendWarning">14</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-dot" style="background: var(--danger);"></span>
+                                        Critical (85%+)
+                                        <span class="legend-val" id="legendCritical">6</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-dot" style="background: var(--offline);"></span>
+                                        Offline
+                                        <span class="legend-val" id="legendOffline">7</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Feed -->
+                    <div class="card animate-in delay-7">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-stream"></i> Recent Activity</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="activity-feed" id="activityFeed">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Usage Table -->
+                <div class="card animate-in delay-7">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-sort-amount-down"></i> Highest Resource Usage</div>
+                        <div class="card-tabs">
+                            <button class="card-tab active" onclick="switchUsageTab('cpu', this)">CPU</button>
+                            <button class="card-tab" onclick="switchUsageTab('mem', this)">Memory</button>
+                            <button class="card-tab" onclick="switchUsageTab('disk', this)">Disk</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table class="usage-table" id="usageTable">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Computer</th>
+                                    <th>Lab</th>
+                                    <th>Usage</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usageTableBody">
+                                <!-- Generated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // ============ DATA ============
+        const labData = {
+            A: { name: 'CS101', prefix: 'A', count: 20 },
+            B: { name: 'CS102', prefix: 'B', count: 16 },
+            C: { name: 'EC201', prefix: 'C', count: 12 }
+        };
+
+        // Generate PC data for each lab
+        function generatePCs(lab, count) {
+            const pcs = [];
+            for (let i = 1; i <= count; i++) {
+                const rand = Math.random();
+                let status = 'online';
+                if (rand < 0.12) status = 'offline';
+                else if (rand < 0.22) status = 'warning';
+                else if (rand < 0.28) status = 'critical';
+
+                const cpu = status === 'offline' ? 0 : Math.floor(Math.random() * 100);
+                const mem = status === 'offline' ? 0 : Math.floor(Math.random() * 100);
+                const disk = status === 'offline' ? 0 : Math.floor(30 + Math.random() * 65);
+
+                pcs.push({
+                    id: `${lab.prefix}${String(i).padStart(2, '0')}`,
+                    lab: lab.name,
+                    status,
+                    cpu, mem, disk
+                });
+            }
+            return pcs;
+        }
+
+        const allPCs = [
+            ...generatePCs(labData.A, labData.A.count),
+            ...generatePCs(labData.B, labData.B.count),
+            ...generatePCs(labData.C, labData.C.count)
+        ];
+
+        let currentLab = 'A';
+
+        // ============ RENDER PC GRID ============
+        function renderPCGrid(labKey) {
+            const lab = labData[labKey];
+            const pcs = allPCs.filter(p => p.id.startsWith(lab.prefix));
+            const grid = document.getElementById('pcGrid');
+            grid.innerHTML = '';
+
+            pcs.forEach((pc, idx) => {
+                const node = document.createElement('div');
+                node.className = `pc-node ${pc.status} animate-in`;
+                node.style.animationDelay = `${idx * 0.03}s`;
+
+                const getFillClass = (val) => {
+                    if (val === 0) return '';
+                    if (val < 60) return 'low';
+                    if (val < 85) return 'mid';
+                    return 'high';
+                };
+
+                node.innerHTML = `
+      <div class="pc-header">
+        <span class="pc-name">${pc.id}</span>
+        <span class="pc-status-dot"></span>
+      </div>
+      <div class="pc-metrics">
+        <div class="pc-metric">
+          <span class="pc-metric-label">CPU</span>
+          <div class="pc-metric-bar"><div class="pc-metric-fill ${getFillClass(pc.cpu)}" style="width:${pc.cpu}%"></div></div>
+          <span class="pc-metric-val">${pc.cpu}%</span>
+        </div>
+        <div class="pc-metric">
+          <span class="pc-metric-label">MEM</span>
+          <div class="pc-metric-bar"><div class="pc-metric-fill ${getFillClass(pc.mem)}" style="width:${pc.mem}%"></div></div>
+          <span class="pc-metric-val">${pc.mem}%</span>
+        </div>
+        <div class="pc-metric">
+          <span class="pc-metric-label">DSK</span>
+          <div class="pc-metric-bar"><div class="pc-metric-fill ${getFillClass(pc.disk)}" style="width:${pc.disk}%"></div></div>
+          <span class="pc-metric-val">${pc.disk}%</span>
+        </div>
+      </div>
+    `;
+                grid.appendChild(node);
+            });
+        }
+
+        function switchLab(key, btn) {
+            currentLab = key;
+            btn.parentElement.querySelectorAll('.card-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            renderPCGrid(key);
+        }
+
+        // ============ ALERTS ============
+        const alerts = [
+            { type: 'critical', icon: 'fa-fire', title: 'CPU Overload on A07', desc: 'CPU usage sustained at 97% for 15 minutes. Possible runaway process detected.', time: '2 min ago' },
+            { type: 'critical', icon: 'fa-hdd', title: 'Disk Full on B14', desc: 'Disk usage at 98%. System may become unresponsive if not addressed.', time: '8 min ago' },
+            { type: 'warning', icon: 'fa-temperature-high', title: 'High Memory on C05', desc: 'Memory usage at 89%. Chrome processes consuming excessive RAM.', time: '15 min ago' },
+            { type: 'warning', icon: 'fa-unlink', title: 'Intermittent Connection B03', desc: 'Network drops detected 4 times in the last hour.', time: '23 min ago' },
+            { type: 'info', icon: 'fa-power-off', title: 'A12 Went Offline', desc: 'Computer A12 shutdown unexpectedly. Last seen 23 minutes ago.', time: '23 min ago' },
+            { type: 'warning', icon: 'fa-memory', title: 'Memory Leak Suspect A15', desc: 'Memory steadily increasing over 2 hours without release.', time: '41 min ago' },
+            { type: 'resolved', icon: 'fa-check-circle', title: 'A03 CPU Normalized', desc: 'CPU usage returned to normal after process termination.', time: '1h ago' },
+            { type: 'info', icon: 'fa-sync', title: 'Lab B Batch Update Complete', desc: 'Security patches applied to all 16 computers in Lab B.', time: '2h ago' }
+        ];
+
+        function renderAlerts() {
+            const list = document.getElementById('alertList');
+            list.innerHTML = '';
+            alerts.forEach(a => {
+                const item = document.createElement('div');
+                item.className = `alert-item ${a.type}`;
+                item.innerHTML = `
+      <div class="alert-icon"><i class="fas ${a.icon}"></i></div>
+      <div class="alert-content">
+        <div class="alert-title">${a.title}</div>
+        <div class="alert-desc">${a.desc}</div>
+        <div class="alert-time">${a.time}</div>
+      </div>
+    `;
+                list.appendChild(item);
+            });
+        }
+
+        // ============ ACTIVITY FEED ============
+        const activities = [
+            { dot: 'red', icon: 'fa-exclamation', text: '<strong>A07</strong> triggered CPU critical alert', time: '2 min ago' },
+            { dot: 'red', icon: 'fa-hdd', text: '<strong>B14</strong> disk reached 98% capacity', time: '8 min ago' },
+            { dot: 'yellow', icon: 'fa-memory', text: '<strong>C05</strong> memory warning threshold exceeded', time: '15 min ago' },
+            { dot: 'blue', icon: 'fa-power-off', text: '<strong>A12</strong> went offline unexpectedly', time: '23 min ago' },
+            { dot: 'green', icon: 'fa-check', text: '<strong>A03</strong> CPU usage returned to normal', time: '1h ago' },
+            { dot: 'green', icon: 'fa-shield-alt', text: 'Security patches applied to <strong>Lab B</strong> (16 PCs)', time: '2h ago' },
+            { dot: 'blue', icon: 'fa-user-plus', text: '<strong>Prof. Sharma</strong> logged into Lab A console', time: '3h ago' },
+            { dot: 'green', icon: 'fa-server', text: 'Monitoring agent updated on <strong>all nodes</strong>', time: '5h ago' }
+        ];
+
+        function renderActivities() {
+            const feed = document.getElementById('activityFeed');
+            feed.innerHTML = '';
+            activities.forEach(a => {
+                const item = document.createElement('div');
+                item.className = 'activity-item';
+                item.innerHTML = `
+      <div class="activity-dot ${a.dot}"><i class="fas ${a.icon}"></i></div>
+      <div>
+        <div class="activity-text">${a.text}</div>
+        <div class="activity-time">${a.time}</div>
+      </div>
+    `;
+                feed.appendChild(item);
+            });
+        }
+
+        // ============ USAGE TABLE ============
+        function renderUsageTable(metric) {
+            const onlinePCs = allPCs.filter(p => p.status !== 'offline');
+            const sorted = [...onlinePCs].sort((a, b) => b[metric] - a[metric]).slice(0, 8);
+            const tbody = document.getElementById('usageTableBody');
+            tbody.innerHTML = '';
+
+            const metricLabels = { cpu: 'CPU', mem: 'Memory', disk: 'Disk' };
+
+            sorted.forEach((pc, i) => {
+                const val = pc[metric];
+                const fillClass = val < 60 ? 'low' : val < 85 ? 'mid' : 'high';
+                const fillColor = val < 60 ? 'var(--accent)' : val < 85 ? 'var(--warning)' : 'var(--danger)';
+                const statusLabel = val >= 85 ? '<span style="color:var(--danger);font-weight:600;font-size:12px;">Critical</span>' :
+                    val >= 60 ? '<span style="color:var(--warning);font-weight:600;font-size:12px;">Warning</span>' :
+                        '<span style="color:var(--accent);font-weight:600;font-size:12px;">Normal</span>';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+      <td style="color:var(--fg-dim);font-family:'JetBrains Mono',monospace;font-size:12px;">#${i + 1}</td>
+      <td class="pc-id">${pc.id}</td>
+      <td style="color:var(--fg-muted);font-size:12px;">Lab ${pc.lab}</td>
+      <td>
+        <span class="usage-bar"><span class="usage-fill" style="width:${val}%;background:${fillColor};"></span></span>
+        <span class="usage-val" style="color:${fillColor};">${val}%</span>
+      </td>
+      <td>${statusLabel}</td>
+    `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function switchUsageTab(metric, btn) {
+            btn.parentElement.querySelectorAll('.card-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            renderUsageTable(metric);
+        }
+
+        // ============ CHARTS ============
+        function initCPUChart() {
+            const ctx = document.getElementById('cpuChart').getContext('2d');
+
+            // Generate time labels for last 60 minutes
+            const labels = [];
+            const now = new Date();
+            for (let i = 59; i >= 0; i--) {
+                const d = new Date(now - i * 60000);
+                labels.push(d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0'));
+            }
+
+            // Generate realistic CPU data with some spikes
+            const avgData = labels.map((_, i) => {
+                const base = 45 + 15 * Math.sin(i * 0.1);
+                const spike = (i === 15 || i === 38 || i === 52) ? 30 : 0;
+                const noise = (Math.random() - 0.5) * 10;
+                return Math.min(100, Math.max(5, base + spike + noise));
+            });
+
+            const maxData = labels.map((_, i) => {
+                return avgData[i] + 10 + Math.random() * 15;
+            });
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+            gradient.addColorStop(0, 'rgba(14, 165, 233, 0.2)');
+            gradient.addColorStop(1, 'rgba(14, 165, 233, 0.0)');
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Average CPU',
+                            data: avgData,
+                            borderColor: '#0ea5e9',
+                            backgroundColor: gradient,
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 4,
+                            pointHoverBackgroundColor: '#0ea5e9'
+                        },
+                        {
+                            label: 'Peak CPU',
+                            data: maxData,
+                            borderColor: 'rgba(59, 130, 246, 0.5)',
+                            borderWidth: 1,
+                            borderDash: [4, 4],
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 0,
+                            pointHoverRadius: 3,
+                            pointHoverBackgroundColor: '#3b82f6'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                color: '#64748b',
+                                font: { family: 'Space Grotesk', size: 11 },
+                                boxWidth: 12,
+                                boxHeight: 2,
+                                padding: 12
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#ffffff',
+                            borderColor: '#e2e8f0',
+                            borderWidth: 1,
+                            titleColor: '#0f172a',
+                            bodyColor: '#475569',
+                            titleFont: { family: 'Space Grotesk', weight: '600' },
+                            bodyFont: { family: 'JetBrains Mono', size: 12 },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(203, 213, 225, 0.5)', drawBorder: false },
+                            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 8 },
+                            border: { display: false }
+                        },
+                        y: {
+                            min: 0, max: 100,
+                            grid: { color: 'rgba(203, 213, 225, 0.5)', drawBorder: false },
+                            ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v + '%', stepSize: 25 },
+                            border: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function initDonutChart() {
+            const ctx = document.getElementById('donutChart').getContext('2d');
+
+            const normalCount = allPCs.filter(p => p.status === 'online' && p.cpu < 60).length;
+            const warnCount = allPCs.filter(p => p.status === 'online' && p.cpu >= 60 && p.cpu < 85).length + allPCs.filter(p => p.status === 'warning').length;
+            const critCount = allPCs.filter(p => p.status === 'critical' || (p.status === 'online' && p.cpu >= 85)).length;
+            const offCount = allPCs.filter(p => p.status === 'offline').length;
+
+            document.getElementById('legendNormal').textContent = normalCount;
+            document.getElementById('legendWarning').textContent = warnCount;
+            document.getElementById('legendCritical').textContent = critCount;
+            document.getElementById('legendOffline').textContent = offCount;
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Normal', 'Warning', 'Critical', 'Offline'],
+                    datasets: [{
+                        data: [normalCount, warnCount, critCount, offCount],
+                        backgroundColor: ['#0ea5e9', '#f97316', '#ef4444', '#94a3b8'],
+                        borderColor: '#ffffff',
+                        borderWidth: 3,
+                        hoverBorderColor: '#ffffff',
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    cutout: '72%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#ffffff',
+                            borderColor: '#e2e8f0',
+                            borderWidth: 1,
+                            titleColor: '#0f172a',
+                            bodyColor: '#475569',
+                            titleFont: { family: 'Space Grotesk', weight: '600' },
+                            bodyFont: { family: 'JetBrains Mono', size: 12 },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: (ctx) => ` ${ctx.label}: ${ctx.parsed} PCs`
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============ UPDATE STATS ============
+        function updateStats() {
+            const online = allPCs.filter(p => p.status !== 'offline').length;
+            const offline = allPCs.length - online;
+            const alertCount = allPCs.filter(p => p.status === 'critical' || p.status === 'warning').length;
+            const avgDisk = Math.round(allPCs.filter(p => p.status !== 'offline').reduce((s, p) => s + p.disk, 0) / Math.max(1, online));
+
+            document.getElementById('statTotal').textContent = allPCs.length;
+            document.getElementById('statOnline').textContent = online;
+            document.getElementById('statAlerts').textContent = alertCount;
+            document.getElementById('statDisk').textContent = avgDisk + '%';
+        }
+
+        // ============ UTILITIES ============
+        function refreshData() {
+            // Slightly randomize values to simulate live update
+            allPCs.forEach(pc => {
+                if (pc.status !== 'offline') {
+                    pc.cpu = Math.min(100, Math.max(0, pc.cpu + Math.floor((Math.random() - 0.5) * 15)));
+                    pc.mem = Math.min(100, Math.max(0, pc.mem + Math.floor((Math.random() - 0.5) * 10)));
+                }
+            });
+
+            renderPCGrid(currentLab);
+            updateStats();
+            renderUsageTable('cpu');
+
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent =
+                now.getHours().toString().padStart(2, '0') + ':' +
+                now.getMinutes().toString().padStart(2, '0') + ':' +
+                now.getSeconds().toString().padStart(2, '0');
+
+            // Show inline toast
+            showToast('Data refreshed successfully');
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => { });
+            } else {
+                document.exitFullscreen().catch(() => { });
+            }
+        }
+
+        function showToast(message) {
+            const existing = document.querySelector('.toast-notification');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            toast.style.cssText = `
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    color: var(--accent);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 8px 32px rgba(14, 165, 233, 0.15);
+    animation: fadeUp 0.3s ease;
+  `;
+            toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+
+        // ============ LIVE SIMULATION ============
+        // Subtly update values every 5 seconds
+        setInterval(() => {
+            allPCs.forEach(pc => {
+                if (pc.status !== 'offline') {
+                    pc.cpu = Math.min(100, Math.max(2, pc.cpu + Math.floor((Math.random() - 0.48) * 8)));
+                    pc.mem = Math.min(100, Math.max(5, pc.mem + Math.floor((Math.random() - 0.49) * 5)));
+                }
+            });
+            // Silently update just the stat numbers
+            updateStats();
+
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent =
+                now.getHours().toString().padStart(2, '0') + ':' +
+                now.getMinutes().toString().padStart(2, '0') + ':' +
+                now.getSeconds().toString().padStart(2, '0');
+        }, 5000);
+
+        // ============ INIT ============
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPCGrid('A');
+            renderAlerts();
+            renderActivities();
+            renderUsageTable('cpu');
+            updateStats();
+            initCPUChart();
+            initDonutChart();
+        });
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,3959 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>College Lab Infrastructure Monitoring Dashboard</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-deep: #e0f2fe;
+            --bg-main: #f0f9ff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f8fafc;
+            --border: #e2e8f0;
+            --border-light: #cbd5e1;
+            --fg: #0f172a;
+            --fg-muted: #475569;
+            --fg-dim: #64748b;
+            --accent: #0ea5e9;
+            --accent-glow: rgba(14, 165, 233, 0.15);
+            --accent-dim: rgba(14, 165, 233, 0.08);
+            --danger: #ef4444;
+            --danger-glow: rgba(239, 68, 68, 0.15);
+            --warning: #f97316;
+            --warning-glow: rgba(249, 115, 22, 0.15);
+            --info: #3b82f6;
+            --info-glow: rgba(59, 130, 246, 0.12);
+            --offline: #94a3b8;
+            --radius: 10px;
+            --radius-sm: 6px;
+            --radius-lg: 14px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--bg-deep);
+            color: var(--fg);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-deep);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-light);
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--fg-dim);
+        }
+
+        /* Background atmosphere */
+        .bg-atmosphere {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 0;
+            background:
+                radial-gradient(ellipse 600px 400px at 15% 20%, rgba(14, 165, 233, 0.06) 0%, transparent 70%),
+                radial-gradient(ellipse 500px 500px at 85% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 70%),
+                radial-gradient(ellipse 400px 300px at 50% 50%, rgba(14, 165, 233, 0.04) 0%, transparent 70%);
+        }
+
+        /* Layout */
+        .app-layout {
+            display: flex;
+            min-height: 100vh;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            min-height: 100vh;
+            background: var(--bg-main);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-brand {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent), #0284c7);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.25);
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--fg);
+            letter-spacing: -0.3px;
+        }
+
+        .brand-sub {
+            font-size: 11px;
+            color: var(--fg-dim);
+            margin-top: 2px;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .nav-section-label {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--fg-dim);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            padding: 16px 12px 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: var(--radius-sm);
+            color: var(--fg-muted);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 13.5px;
+            font-weight: 500;
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: var(--accent-dim);
+            color: var(--fg);
+        }
+
+        .nav-item.active {
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 20px;
+            background: var(--accent);
+            border-radius: 0 3px 3px 0;
+        }
+
+        .nav-item i {
+            width: 18px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .nav-badge {
+            margin-left: auto;
+            background: var(--danger);
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .sidebar-footer {
+            padding: 16px 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .lab-selector {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            color: var(--fg);
+            font-size: 13px;
+            font-family: 'Space Grotesk', sans-serif;
+            width: 100%;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%237a8bb5' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+        }
+
+        .lab-selector:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Main */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Top bar */
+        .topbar {
+            height: 64px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 28px;
+            gap: 16px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .topbar-search {
+            flex: 1;
+            max-width: 400px;
+            position: relative;
+        }
+
+        .topbar-search i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--fg-dim);
+            font-size: 13px;
+        }
+
+        .topbar-search input {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 9px 14px 9px 38px;
+            color: var(--fg);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            transition: border-color 0.2s;
+        }
+
+        .topbar-search input::placeholder {
+            color: var(--fg-dim);
+        }
+
+        .topbar-search input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .topbar-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--fg-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            font-size: 14px;
+        }
+
+        .topbar-btn:hover {
+            background: var(--bg-card-hover);
+            color: var(--fg);
+            border-color: var(--border-light);
+        }
+
+        .topbar-btn .notif-dot {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            border: 2px solid var(--bg-card);
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 8px;
+            padding-left: 16px;
+            border-left: 1px solid var(--border);
+            cursor: pointer;
+        }
+
+        .user-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: var(--radius-sm);
+            background: linear-gradient(135deg, var(--accent), #0284c7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .user-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .user-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--fg);
+        }
+
+        .user-role {
+            font-size: 11px;
+            color: var(--fg-dim);
+        }
+
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 12px;
+            background: rgba(14, 165, 233, 0.08);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .live-dot {
+            width: 7px;
+            height: 7px;
+            background: var(--accent);
+            border-radius: 50%;
+            animation: pulse-live 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse-live {
+
+            0%,
+            100% {
+                opacity: 1;
+                box-shadow: 0 0 0 0 rgba(14, 165, 233, 0.5);
+            }
+
+            50% {
+                opacity: 0.6;
+                box-shadow: 0 0 0 5px rgba(14, 165, 233, 0);
+            }
+        }
+
+        /* Content area */
+        .content-area {
+            flex: 1;
+            padding: 24px 28px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Page header */
+        .page-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+        }
+
+        .page-title {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--fg);
+        }
+
+        .page-subtitle {
+            font-size: 13px;
+            color: var(--fg-muted);
+            margin-top: 4px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 9px 18px;
+            border-radius: var(--radius-sm);
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #ffffff;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.2);
+        }
+
+        .btn-primary:hover {
+            box-shadow: 0 0 30px rgba(14, 165, 233, 0.35);
+            transform: translateY(-1px);
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--fg-muted);
+            border-color: var(--border);
+        }
+
+        .btn-ghost:hover {
+            background: var(--bg-card);
+            color: var(--fg);
+        }
+
+        /* Stat cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            border-color: var(--border-light);
+            transform: translateY(-2px);
+            box-shadow: var(--shadow);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+        }
+
+        .stat-card.accent::before {
+            background: linear-gradient(90deg, var(--accent), transparent);
+        }
+
+        .stat-card.info::before {
+            background: linear-gradient(90deg, var(--info), transparent);
+        }
+
+        .stat-card.danger::before {
+            background: linear-gradient(90deg, var(--danger), transparent);
+        }
+
+        .stat-card.warning::before {
+            background: linear-gradient(90deg, var(--warning), transparent);
+        }
+
+        .stat-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            margin-bottom: 14px;
+        }
+
+        .stat-card.accent .stat-icon {
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .stat-card.info .stat-icon {
+            background: var(--info-glow);
+            color: var(--info);
+        }
+
+        .stat-card.danger .stat-icon {
+            background: var(--danger-glow);
+            color: var(--danger);
+        }
+
+        .stat-card.warning .stat-icon {
+            background: var(--warning-glow);
+            color: var(--warning);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--fg-dim);
+            font-weight: 500;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 30px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            letter-spacing: -1px;
+            line-height: 1;
+        }
+
+        .stat-card.accent .stat-value {
+            color: var(--accent);
+        }
+
+        .stat-card.info .stat-value {
+            color: var(--info);
+        }
+
+        .stat-card.danger .stat-value {
+            color: var(--danger);
+        }
+
+        .stat-card.warning .stat-value {
+            color: var(--warning);
+        }
+
+        .stat-change {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .stat-change.up {
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .stat-change.down {
+            background: var(--danger-glow);
+            color: var(--danger);
+        }
+
+        .stat-sparkline {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 100px;
+            height: 40px;
+            opacity: 0.3;
+        }
+
+        /* Main grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--fg);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-title i {
+            color: var(--fg-dim);
+            font-size: 13px;
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .card-tabs {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-deep);
+            padding: 3px;
+            border-radius: var(--radius-sm);
+        }
+
+        .card-tab {
+            padding: 5px 14px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--fg-dim);
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            background: none;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+
+        .card-tab.active {
+            background: var(--bg-card);
+            color: var(--fg);
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+        }
+
+        .card-tab:hover:not(.active) {
+            color: var(--fg-muted);
+        }
+
+        /* Computer grid */
+        .pc-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .pc-node {
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            position: relative;
+        }
+
+        .pc-node:hover {
+            border-color: var(--border-light);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        }
+
+        .pc-node.online {
+            border-left: 3px solid var(--accent);
+        }
+
+        .pc-node.offline {
+            border-left: 3px solid var(--offline);
+        }
+
+        .pc-node.warning {
+            border-left: 3px solid var(--warning);
+        }
+
+        .pc-node.critical {
+            border-left: 3px solid var(--danger);
+        }
+
+        .pc-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .pc-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--fg);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .pc-status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .pc-node.online .pc-status-dot {
+            background: var(--accent);
+            box-shadow: 0 0 6px rgba(14, 165, 233, 0.5);
+        }
+
+        .pc-node.offline .pc-status-dot {
+            background: var(--offline);
+        }
+
+        .pc-node.warning .pc-status-dot {
+            background: var(--warning);
+            box-shadow: 0 0 6px rgba(249, 115, 22, 0.5);
+        }
+
+        .pc-node.critical .pc-status-dot {
+            background: var(--danger);
+            box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+            animation: pulse-dot 2s infinite;
+        }
+
+        .pc-metrics {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .pc-metric {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pc-metric-label {
+            font-size: 10px;
+            color: var(--fg-dim);
+            width: 28px;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .pc-metric-bar {
+            flex: 1;
+            height: 4px;
+            background: var(--bg-card);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .pc-metric-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.6s ease;
+        }
+
+        .pc-node.offline .pc-metric-fill {
+            background: var(--offline) !important;
+        }
+
+        .pc-metric-fill.low {
+            background: var(--accent);
+        }
+
+        .pc-metric-fill.mid {
+            background: var(--warning);
+        }
+
+        .pc-metric-fill.high {
+            background: var(--danger);
+        }
+
+        .pc-metric-val {
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--fg-dim);
+            width: 30px;
+            text-align: right;
+        }
+
+        .pc-node.offline .pc-name,
+        .pc-node.offline .pc-metric-label,
+        .pc-node.offline .pc-metric-val {
+            opacity: 0.4;
+        }
+
+        /* Chart area */
+        .chart-container {
+            position: relative;
+            height: 200px;
+        }
+
+        /* Alerts panel */
+        .alert-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 440px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+
+        .alert-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-deep);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .alert-item:hover {
+            border-color: var(--border-light);
+        }
+
+        .alert-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .alert-item.critical .alert-icon {
+            background: var(--danger-glow);
+            color: var(--danger);
+        }
+
+        .alert-item.warning .alert-icon {
+            background: var(--warning-glow);
+            color: var(--warning);
+        }
+
+        .alert-item.info .alert-icon {
+            background: var(--info-glow);
+            color: var(--info);
+        }
+
+        .alert-item.resolved .alert-icon {
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .alert-content {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .alert-title {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--fg);
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .alert-desc {
+            font-size: 11px;
+            color: var(--fg-dim);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .alert-time {
+            font-size: 10px;
+            color: var(--fg-dim);
+            font-family: 'JetBrains Mono', monospace;
+            white-space: nowrap;
+            margin-top: 4px;
+        }
+
+        /* Bottom grid */
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+        }
+
+        /* Donut chart wrapper */
+        .donut-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .donut-canvas-wrap {
+            width: 120px;
+            height: 120px;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        .donut-center {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .donut-center-val {
+            font-size: 22px;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--fg);
+            line-height: 1;
+        }
+
+        .donut-center-label {
+            font-size: 10px;
+            color: var(--fg-dim);
+            margin-top: 2px;
+        }
+
+        .donut-legend {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--fg-muted);
+        }
+
+        .legend-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            flex-shrink: 0;
+        }
+
+        .legend-val {
+            margin-left: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--fg);
+            font-size: 12px;
+        }
+
+        /* Top usage table */
+        .usage-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .usage-table th {
+            text-align: left;
+            font-size: 10px;
+            color: var(--fg-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+            padding: 0 0 10px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .usage-table td {
+            padding: 10px 0;
+            font-size: 12.5px;
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        .usage-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .usage-table .pc-id {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            color: var(--fg);
+        }
+
+        .usage-table .usage-bar {
+            width: 80px;
+            height: 6px;
+            background: var(--bg-deep);
+            border-radius: 3px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        .usage-table .usage-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .usage-table .usage-val {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Activity feed */
+        .activity-feed {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .activity-item {
+            display: flex;
+            gap: 12px;
+            padding: 10px 0;
+            position: relative;
+        }
+
+        .activity-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 36px;
+            bottom: -2px;
+            width: 1px;
+            background: var(--border);
+        }
+
+        .activity-dot {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            flex-shrink: 0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .activity-dot.green {
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .activity-dot.red {
+            background: var(--danger-glow);
+            color: var(--danger);
+        }
+
+        .activity-dot.yellow {
+            background: var(--warning-glow);
+            color: var(--warning);
+        }
+
+        .activity-dot.blue {
+            background: var(--info-glow);
+            color: var(--info);
+        }
+
+        .activity-text {
+            font-size: 12px;
+            color: var(--fg-muted);
+            line-height: 1.5;
+        }
+
+        .activity-text strong {
+            color: var(--fg);
+            font-weight: 600;
+        }
+
+        .activity-time {
+            font-size: 10px;
+            color: var(--fg-dim);
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 2px;
+        }
+
+        /* Animations */
+        @keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeUp 0.5s ease forwards;
+            opacity: 0;
+        }
+
+        .delay-1 {
+            animation-delay: 0.05s;
+        }
+
+        .delay-2 {
+            animation-delay: 0.1s;
+        }
+
+        .delay-3 {
+            animation-delay: 0.15s;
+        }
+
+        .delay-4 {
+            animation-delay: 0.2s;
+        }
+
+        .delay-5 {
+            animation-delay: 0.25s;
+        }
+
+        .delay-6 {
+            animation-delay: 0.3s;
+        }
+
+        .delay-7 {
+            animation-delay: 0.35s;
+        }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .pc-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+
+            .bottom-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .mobile-menu-btn {
+            display: none;
+            width: 38px;
+            height: 38px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--fg-muted);
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 99;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+
+            .mobile-menu-btn {
+                display: flex;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .pc-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar-user .user-info {
+                display: none;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Tooltip */
+        .tooltip-wrap {
+            position: relative;
+        }
+
+        .tooltip-wrap:hover .tooltip-box {
+            opacity: 1;
+            transform: translateX(0) translateY(-50%);
+            pointer-events: auto;
+        }
+
+        .tooltip-box {
+            position: absolute;
+            left: calc(100% + 10px);
+            top: 50%;
+            transform: translateX(-6px) translateY(-50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius);
+            padding: 12px 16px;
+            min-width: 180px;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.2s ease;
+            z-index: 200;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        /* ==================== SCHEDULE MANAGER STYLES ==================== */
+        .schedule-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .schedule-toolbar {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 16px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .schedule-nav-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .schedule-nav-btn {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            color: var(--fg);
+            border-radius: var(--radius-sm);
+            padding: 8px 14px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .schedule-nav-btn:hover {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .schedule-current-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--fg);
+            min-width: 200px;
+        }
+
+        .schedule-filters {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .schedule-select {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 8px 12px;
+            color: var(--fg);
+            font-size: 13px;
+            font-family: 'Space Grotesk', sans-serif;
+            cursor: pointer;
+            min-width: 160px;
+        }
+
+        .schedule-select:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .view-toggles {
+            display: flex;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 3px;
+            gap: 2px;
+        }
+
+        .view-toggle-btn {
+            background: transparent;
+            border: none;
+            color: var(--fg-dim);
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Space Grotesk', sans-serif;
+            transition: all 0.2s ease;
+        }
+
+        .view-toggle-btn.active {
+            background: var(--accent);
+            color: #ffffff;
+            box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
+        }
+
+        /* Color Badges & Legend */
+        .schedule-legend {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px 20px;
+            font-size: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        .legend-tag {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            color: var(--fg-muted);
+        }
+
+        .legend-color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        /* Color Themes for Lab Blocks */
+        .res-laba {
+            background: rgba(14, 165, 233, 0.14) !important;
+            border-left: 4px solid #0ea5e9 !important;
+            color: #0284c7 !important;
+        }
+        .res-labb {
+            background: rgba(16, 185, 129, 0.14) !important;
+            border-left: 4px solid #10b981 !important;
+            color: #047857 !important;
+        }
+        .res-labc {
+            background: rgba(139, 92, 246, 0.14) !important;
+            border-left: 4px solid #8b5cf6 !important;
+            color: #6d28d9 !important;
+        }
+        .res-ailab {
+            background: rgba(245, 158, 11, 0.14) !important;
+            border-left: 4px solid #f59e0b !important;
+            color: #b45309 !important;
+        }
+        .res-vrlab {
+            background: rgba(244, 63, 94, 0.14) !important;
+            border-left: 4px solid #f43f5e !important;
+            color: #be123c !important;
+        }
+
+        /* Calendar Grid Container */
+        .calendar-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        /* Month View Grid */
+        .month-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+        }
+
+        .month-header-cell {
+            background: var(--bg-main);
+            padding: 12px 10px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--fg-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+        }
+
+        .month-header-cell:last-child {
+            border-right: none;
+        }
+
+        .month-day-cell {
+            min-height: 120px;
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            transition: background 0.15s ease;
+            cursor: pointer;
+        }
+
+        .month-day-cell:nth-child(7n) {
+            border-right: none;
+        }
+
+        .month-day-cell:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .month-day-cell.other-month {
+            opacity: 0.45;
+            background: var(--bg-main);
+        }
+
+        .day-num-wrap {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2px;
+        }
+
+        .day-num {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--fg-muted);
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+        }
+
+        .month-day-cell.is-today .day-num {
+            background: var(--accent);
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(14, 165, 233, 0.4);
+        }
+
+        /* Event Block Pills */
+        .event-pill {
+            padding: 6px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            word-break: break-word;
+        }
+
+        .event-pill:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .event-pill-title {
+            font-weight: 700;
+            line-height: 1.25;
+        }
+
+        .event-pill-time {
+            font-size: 9.5px;
+            opacity: 0.85;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .event-pill-room {
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        /* Week View Timeline */
+        .week-grid-container {
+            overflow-x: auto;
+        }
+
+        .week-grid-header {
+            display: grid;
+            grid-template-columns: 70px repeat(7, 1fr);
+            background: var(--bg-main);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .week-time-col-head {
+            padding: 12px 6px;
+            font-size: 11px;
+            color: var(--fg-dim);
+            font-weight: 600;
+            text-align: center;
+            border-right: 1px solid var(--border);
+        }
+
+        .week-day-head {
+            padding: 10px 6px;
+            text-align: center;
+            border-right: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--fg-muted);
+        }
+
+        .week-day-head:last-child {
+            border-right: none;
+        }
+
+        .week-day-head.is-today {
+            background: var(--accent-glow);
+            color: var(--accent);
+        }
+
+        .week-grid-body {
+            display: grid;
+            grid-template-columns: 70px repeat(7, 1fr);
+        }
+
+        .time-label-slot {
+            height: 60px;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            font-size: 10.5px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--fg-dim);
+            padding: 6px 8px;
+            text-align: right;
+        }
+
+        .week-col-slot {
+            height: 60px;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            position: relative;
+            background: var(--bg-card);
+        }
+
+        .week-col-slot:last-child {
+            border-right: none;
+        }
+
+        .week-col-slot:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .week-event-card {
+            position: absolute;
+            left: 4px;
+            right: 4px;
+            border-radius: var(--radius-sm);
+            padding: 6px 8px;
+            font-size: 11px;
+            z-index: 10;
+            cursor: pointer;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: all 0.2s ease;
+        }
+
+        .week-event-card:hover {
+            z-index: 20;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+            transform: scale(1.02);
+        }
+
+        /* Day View Breakdown */
+        .day-view-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 20px;
+        }
+
+        .day-slot-card {
+            display: flex;
+            gap: 16px;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            align-items: flex-start;
+        }
+
+        .day-slot-time {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--accent);
+            min-width: 110px;
+            padding-top: 4px;
+        }
+
+        .day-slot-events {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .day-event-detail-box {
+            padding: 14px 18px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .day-event-info-title {
+            font-size: 14px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .day-event-info-sub {
+            font-size: 12px;
+            opacity: 0.85;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="bg-atmosphere"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <div class="app-layout">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon"><i class="fas fa-microchip"></i></div>
+                <div class="brand-text">
+                    <span class="brand-title">LabMonitor</span>
+                    <span class="brand-sub">Infrastructure Dashboard</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-label">Main</div>
+                <div class="nav-item active" onclick="navigateTo('dashboard', this)"><i class="fas fa-th-large"></i> Dashboard</div>
+                <div class="nav-item" onclick="navigateTo('computers', this)"><i class="fas fa-desktop"></i> Computers</div>
+                <div class="nav-item" onclick="navigateTo('network', this)"><i class="fas fa-network-wired"></i> Network</div>
+                <div class="nav-item" onclick="navigateTo('alerts', this)">
+                    <i class="fas fa-bell"></i> Alerts
+                    <span class="nav-badge" id="navAlertBadge">0</span>
+                </div>
+
+                <div class="nav-section-label">Management</div>
+                <div class="nav-item" onclick="navigateTo('labs', this)"><i class="fas fa-door-open"></i> Labs</div>
+                <div class="nav-item" onclick="navigateTo('users', this)"><i class="fas fa-users"></i> Users</div>
+                <div class="nav-item" onclick="navigateTo('schedules', this)"><i class="fas fa-calendar-alt"></i> Schedules</div>
+                <div class="nav-item" onclick="navigateTo('reports', this)"><i class="fas fa-file-alt"></i> Reports</div>
+
+                <div class="nav-section-label">System</div>
+                <div class="nav-item" onclick="navigateTo('settings', this)"><i class="fas fa-cog"></i> Settings</div>
+                <div class="nav-item" onclick="navigateTo('integrations', this)"><i class="fas fa-plug"></i> Integrations</div>
+            </nav>
+
+            <div class="sidebar-footer">
+                <select class="lab-selector" id="labSelector" aria-label="Select lab" onchange="filterByLab(this.value)">
+                    <option value="all">All Machines</option>
+                </select>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Top Bar -->
+            <header class="topbar">
+                <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="live-indicator">
+                    <span class="live-dot"></span>
+                    LIVE
+                </div>
+
+                <div class="topbar-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search computers, labs, alerts..." aria-label="Search" oninput="handleSearch(this.value)">
+                </div>
+
+                <div class="topbar-actions">
+                    <button class="topbar-btn" aria-label="Refresh data" onclick="refreshData()">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <button class="topbar-btn" aria-label="Notifications">
+                        <i class="fas fa-bell"></i>
+                        <span class="notif-dot"></span>
+                    </button>
+                    <button class="topbar-btn" aria-label="Fullscreen" onclick="toggleFullscreen()">
+                        <i class="fas fa-expand"></i>
+                    </button>
+                </div>
+
+                <div class="topbar-user">
+                    <div class="user-avatar">AK</div>
+                    <div class="user-info">
+                        <span class="user-name">Admin Kumar</span>
+                        <span class="user-role">System Administrator</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Content -->
+            <main class="content-area">
+                <!-- Page Header -->
+                <div class="page-header animate-in">
+                    <div>
+                        <h1 class="page-title">Lab Infrastructure Overview</h1>
+                        <p class="page-subtitle">Real-time monitoring across 3 labs &middot; Last updated: <span
+                                id="lastUpdate">just now</span></p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-ghost" onclick="exportCSV()"><i class="fas fa-download"></i> Export</button>
+                        <button class="btn btn-primary" onclick="showAddComputerModal()"><i class="fas fa-plus"></i> Add Computer</button>
+                    </div>
+                </div>
+
+                <!-- Stats -->
+                <div class="stats-grid">
+                    <div class="stat-card accent animate-in delay-1">
+                        <div class="stat-icon"><i class="fas fa-desktop"></i></div>
+                        <div class="stat-label">Total Computers</div>
+                        <div class="stat-value" id="statTotal">48</div>
+                        <div class="stat-change up"><i class="fas fa-arrow-up"></i> +4 this month</div>
+                    </div>
+                    <div class="stat-card info animate-in delay-2">
+                        <div class="stat-icon"><i class="fas fa-wifi"></i></div>
+                        <div class="stat-label">Online Now</div>
+                        <div class="stat-value" id="statOnline">41</div>
+                        <div class="stat-change up"><i class="fas fa-arrow-up"></i> 85.4% uptime</div>
+                    </div>
+                    <div class="stat-card danger animate-in delay-3">
+                        <div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-label">Active Alerts</div>
+                        <div class="stat-value" id="statAlerts">5</div>
+                        <div class="stat-change down"><i class="fas fa-arrow-down"></i> +2 since 1h</div>
+                    </div>
+                    <div class="stat-card warning animate-in delay-4">
+                        <div class="stat-icon"><i class="fas fa-microchip"></i></div>
+                        <div class="stat-label">Avg CPU Usage</div>
+                        <div class="stat-value" id="statDisk">0%</div>
+                        <div class="stat-change up"><i class="fas fa-chart-line"></i> Live average</div>
+                    </div>
+                </div>
+
+                <!-- Main Grid: PC Grid + Alerts -->
+                <div class="main-grid">
+                    <!-- PC Node Grid -->
+                    <div class="card animate-in delay-5">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-th"></i> Computer Nodes &mdash; All Labs</div>
+                            <div class="card-tabs">
+                                <button class="card-tab active" onclick="switchLab('all', this)">All</button>
+                                <button class="card-tab" onclick="switchLab('A', this)">Lab A</button>
+                                <button class="card-tab" onclick="switchLab('B', this)">Lab B</button>
+                                <button class="card-tab" onclick="switchLab('C', this)">Lab C</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="pc-grid" id="pcGrid">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerts Panel -->
+                    <div class="card animate-in delay-6">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-bell"></i> Active Alerts</div>
+                            <button class="btn btn-ghost" style="padding: 5px 12px; font-size: 11px;" onclick="navigateTo('alerts', document.querySelectorAll('.nav-item')[3])">View All</button>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert-list" id="alertList">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Grid: Charts + Table + Activity -->
+                <div class="bottom-grid">
+                    <!-- CPU Trend Chart -->
+                    <div class="card animate-in delay-5">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-chart-line"></i> CPU Usage Trend</div>
+                            <div class="card-tabs">
+                                <button class="card-tab active" onclick="switchCpuChartRange(60, this)">1H</button>
+                                <button class="card-tab" onclick="switchCpuChartRange(360, this)">6H</button>
+                                <button class="card-tab" onclick="switchCpuChartRange(1440, this)">24H</button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="chart-container">
+                                <canvas id="cpuChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Resource Distribution -->
+                    <div class="card animate-in delay-6">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-chart-pie"></i> Resource Distribution</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="donut-wrapper">
+                                <div class="donut-canvas-wrap">
+                                    <canvas id="donutChart"></canvas>
+                                    <div class="donut-center">
+                                        <div class="donut-center-val" id="donutCenterVal">67%</div>
+                                        <div class="donut-center-label">Avg Load</div>
+                                    </div>
+                                </div>
+                                <div class="donut-legend">
+                                    <div class="legend-item">
+                                        <span class="legend-dot" style="background: var(--accent);"></span>
+                                        Normal (0-60%)
+                                        <span class="legend-val" id="legendNormal">28</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-dot" style="background: var(--warning);"></span>
+                                        Warning (60-85%)
+                                        <span class="legend-val" id="legendWarning">14</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-dot" style="background: var(--danger);"></span>
+                                        Critical (85%+)
+                                        <span class="legend-val" id="legendCritical">6</span>
+                                    </div>
+                                    <div class="legend-item">
+                                        <span class="legend-dot" style="background: var(--offline);"></span>
+                                        Offline
+                                        <span class="legend-val" id="legendOffline">7</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Activity Feed -->
+                    <div class="card animate-in delay-7">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-stream"></i> Recent Activity</div>
+                        </div>
+                        <div class="card-body">
+                            <div class="activity-feed" id="activityFeed">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Usage Table -->
+                <div class="card animate-in delay-7">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fas fa-sort-amount-down"></i> Highest Resource Usage</div>
+                        <div class="card-tabs">
+                            <button class="card-tab active" onclick="switchUsageTab('cpu', this)">CPU</button>
+                            <button class="card-tab" onclick="switchUsageTab('mem', this)">Memory</button>
+                            <button class="card-tab" onclick="switchUsageTab('disk', this)">Disk</button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <table class="usage-table" id="usageTable">
+                            <thead>
+                                <tr>
+                                    <th>Rank</th>
+                                    <th>Computer</th>
+                                    <th>Lab</th>
+                                    <th>Usage</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usageTableBody">
+                                <!-- Generated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // ============ STATE ============
+        let allMachines = [];
+        let allAlerts = [];
+        let previousAlertCount = 0;
+        let cpuChartInstance = null;
+        let donutChartInstance = null;
+        let detailChartInstance = null;
+        let currentMetricTab = 'cpu';
+
+        // ============ UTILITY FUNCTIONS ============
+        function relativeTime(timestamp) {
+            if (!timestamp) return 'never';
+            const now = new Date();
+            const then = new Date(timestamp + 'Z'); // UTC
+            const diffMs = now - then;
+            const diffS = Math.floor(diffMs / 1000);
+            if (diffS < 5) return 'just now';
+            if (diffS < 60) return diffS + 's ago';
+            const diffM = Math.floor(diffS / 60);
+            if (diffM < 60) return diffM + 'm ago';
+            const diffH = Math.floor(diffM / 60);
+            if (diffH < 24) return diffH + 'h ago';
+            const diffD = Math.floor(diffH / 24);
+            return diffD + 'd ago';
+        }
+
+        function getFillClass(val) {
+            if (val === 0) return '';
+            if (val < 60) return 'low';
+            if (val < 85) return 'mid';
+            return 'high';
+        }
+
+        function getFillColor(val) {
+            if (val < 60) return 'var(--accent)';
+            if (val < 85) return 'var(--warning)';
+            return 'var(--danger)';
+        }
+
+        function getAlertIcon(alertType) {
+            switch (alertType) {
+                case 'high_cpu': return 'fa-fire';
+                case 'high_memory': return 'fa-memory';
+                case 'low_disk': return 'fa-hdd';
+                case 'offline': return 'fa-power-off';
+                default: return 'fa-exclamation-triangle';
+            }
+        }
+
+        function getAlertClass(severity) {
+            if (severity === 'critical') return 'critical';
+            if (severity === 'warning') return 'warning';
+            return 'info';
+        }
+
+        // ============ ALERT SOUND (Web Audio API) ============
+        function playAlertSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                osc.frequency.setValueAtTime(660, ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.3);
+            } catch (e) {
+                // Audio not available
+            }
+        }
+
+        // ============ FETCH HELPERS ============
+        async function fetchJSON(url) {
+            try {
+                const resp = await fetch(url);
+                return await resp.json();
+            } catch (e) {
+                console.error('Fetch error:', url, e);
+                return null;
+            }
+        }
+
+        async function postJSON(url, body) {
+            try {
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: body ? JSON.stringify(body) : undefined
+                });
+                return await resp.json();
+            } catch (e) {
+                console.error('Post error:', url, e);
+                return null;
+            }
+        }
+
+        // ============ DATA FETCHING ============
+        async function fetchDashboardSummary() {
+            const data = await fetchJSON('/api/dashboard/summary');
+            if (!data) return;
+
+            document.getElementById('statTotal').textContent = data.total_machines || 0;
+            document.getElementById('statOnline').textContent = data.online || 0;
+            document.getElementById('statAlerts').textContent = data.active_alerts || 0;
+
+            // Update disk stat with avg CPU (more useful than disk for summary)
+            const avgCpu = data.avg_cpu || 0;
+            document.getElementById('statDisk').textContent = avgCpu + '%';
+        }
+
+        function updateActiveSubpage() {
+            const pageView = document.getElementById('pageView');
+            if (!pageView || pageView.style.display === 'none') return;
+            
+            switch (currentPage) {
+                case 'computers': renderComputersPage(pageView); break;
+                case 'network': renderNetworkPage(pageView); break;
+                case 'alerts': renderAlertsPage(pageView); break;
+                case 'labs': renderLabsPage(pageView); break;
+                case 'reports': renderReportsPage(pageView); break;
+            }
+        }
+
+        async function fetchMachines() {
+            const data = await fetchJSON('/api/machines');
+            if (!data || !data.machines) return;
+
+            allMachines = data.machines;
+            renderPCGrid();
+            renderUsageTable(currentMetricTab);
+            updateDonutChart();
+            updateLabSelector();
+
+            // Update last-updated time
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent =
+                now.getHours().toString().padStart(2, '0') + ':' +
+                now.getMinutes().toString().padStart(2, '0') + ':' +
+                now.getSeconds().toString().padStart(2, '0');
+
+            updateActiveSubpage();
+        }
+
+        async function fetchAlerts() {
+            const data = await fetchJSON('/api/alerts?acknowledged=false');
+            if (!data || !data.alerts) return;
+
+            const newCount = data.alerts.length;
+
+            // Check for new critical alerts and play sound
+            if (newCount > previousAlertCount && previousAlertCount > 0) {
+                const newAlerts = data.alerts.slice(0, newCount - previousAlertCount);
+                if (newAlerts.some(a => a.severity === 'critical')) {
+                    playAlertSound();
+                }
+            }
+            previousAlertCount = newCount;
+
+            allAlerts = data.alerts;
+            renderAlerts();
+
+            // Update nav badge
+            const badge = document.getElementById('navAlertBadge');
+            if (badge) badge.textContent = newCount;
+
+            updateActiveSubpage();
+        }
+
+        // ============ RENDER PC GRID ============
+        function renderPCGrid() {
+            const grid = document.getElementById('pcGrid');
+            grid.innerHTML = '';
+            
+            const machines = getFilteredMachines();
+
+            if (machines.length === 0) {
+                grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--fg-dim);">' +
+                    '<i class="fas fa-satellite-dish" style="font-size:32px;margin-bottom:12px;display:block;"></i>' +
+                    'No machines found.</div>';
+                return;
+            }
+
+            machines.forEach((pc, idx) => {
+                const node = document.createElement('div');
+                const status = pc.status || 'offline';
+                node.className = `pc-node ${status} animate-in`;
+                node.style.animationDelay = `${idx * 0.03}s`;
+                node.style.cursor = 'pointer';
+                node.onclick = () => openMachineDetail(pc.machine_id);
+
+                const cpu = Math.round(pc.cpu_percent || 0);
+                const mem = Math.round(pc.memory_percent || 0);
+                const disk = Math.round(pc.disk_io_percent || 0);
+                const lastSeen = relativeTime(pc.last_seen);
+
+                node.innerHTML = `
+                    <div class="pc-header">
+                        <span class="pc-name">${pc.machine_id}</span>
+                        <span class="pc-status-dot"></span>
+                    </div>
+                    <div class="pc-metrics">
+                        <div class="pc-metric">
+                            <span class="pc-metric-label">CPU</span>
+                            <div class="pc-metric-bar"><div class="pc-metric-fill ${getFillClass(cpu)}" style="width:${cpu}%"></div></div>
+                            <span class="pc-metric-val">${cpu}%</span>
+                        </div>
+                        <div class="pc-metric">
+                            <span class="pc-metric-label">MEM</span>
+                            <div class="pc-metric-bar"><div class="pc-metric-fill ${getFillClass(mem)}" style="width:${mem}%"></div></div>
+                            <span class="pc-metric-val">${mem}%</span>
+                        </div>
+                        <div class="pc-metric">
+                            <span class="pc-metric-label">DISK</span>
+                            <div class="pc-metric-bar"><div class="pc-metric-fill ${getFillClass(disk)}" style="width:${disk}%"></div></div>
+                            <span class="pc-metric-val">${disk}%</span>
+                        </div>
+                    </div>
+                    <div style="margin-top:8px;font-size:10px;color:var(--fg-dim);font-family:'JetBrains Mono',monospace;">
+                        ${pc.hostname || ''} · ${lastSeen}
+                    </div>
+                `;
+                grid.appendChild(node);
+            });
+        }
+
+        // ============ ALERTS ============
+        function renderAlerts() {
+            const list = document.getElementById('alertList');
+            list.innerHTML = '';
+
+            if (allAlerts.length === 0) {
+                list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--fg-dim);">' +
+                    '<i class="fas fa-check-circle" style="font-size:24px;margin-bottom:8px;display:block;color:var(--accent);"></i>' +
+                    'No active alerts</div>';
+                return;
+            }
+
+            allAlerts.forEach(a => {
+                const item = document.createElement('div');
+                item.className = `alert-item ${getAlertClass(a.severity)}`;
+                item.innerHTML = `
+                    <div class="alert-icon"><i class="fas ${getAlertIcon(a.alert_type)}"></i></div>
+                    <div class="alert-content">
+                        <div class="alert-title">${a.alert_type.replace('_', ' ').toUpperCase()} — ${a.machine_id}</div>
+                        <div class="alert-desc">${a.message}</div>
+                        <div class="alert-time">${relativeTime(a.timestamp)}</div>
+                    </div>
+                    <button onclick="acknowledgeAlert(${a.id}, this)" style="
+                        background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);
+                        padding:4px 10px;font-size:10px;font-weight:600;cursor:pointer;
+                        font-family:'Space Grotesk',sans-serif;align-self:center;flex-shrink:0;">
+                        ACK
+                    </button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        async function acknowledgeAlert(alertId, btn) {
+            btn.disabled = true;
+            btn.textContent = '...';
+            await postJSON(`/api/alerts/${alertId}/acknowledge`);
+            btn.textContent = 'Done';
+            btn.style.background = 'var(--offline)';
+            // Refresh alerts after a moment
+            setTimeout(fetchAlerts, 500);
+        }
+
+        // ============ ACTIVITY FEED (built from alerts) ============
+        async function renderActivities() {
+            const data = await fetchJSON('/api/alerts?acknowledged=all');
+            const feed = document.getElementById('activityFeed');
+            feed.innerHTML = '';
+
+            if (!data || !data.alerts) return;
+
+            const activities = data.alerts.slice(0, 8);
+            activities.forEach(a => {
+                const dotClass = a.severity === 'critical' ? 'red' :
+                                 a.severity === 'warning' ? 'yellow' : 'blue';
+                const icon = getAlertIcon(a.alert_type);
+                const item = document.createElement('div');
+                item.className = 'activity-item';
+                item.innerHTML = `
+                    <div class="activity-dot ${dotClass}"><i class="fas ${icon}"></i></div>
+                    <div>
+                        <div class="activity-text"><strong>${a.machine_id}</strong> — ${a.message}</div>
+                        <div class="activity-time">${relativeTime(a.timestamp)}</div>
+                    </div>
+                `;
+                feed.appendChild(item);
+            });
+        }
+
+        // ============ USAGE TABLE ============
+        function renderUsageTable(metric) {
+            const machines = getFilteredMachines();
+            const onlinePCs = machines.filter(p => p.status === 'online');
+            const metricKey = metric === 'cpu' ? 'cpu_percent' :
+                              metric === 'mem' ? 'memory_percent' : 'disk_io_percent';
+            const sorted = [...onlinePCs].sort((a, b) => (b[metricKey] || 0) - (a[metricKey] || 0)).slice(0, 8);
+            const tbody = document.getElementById('usageTableBody');
+            tbody.innerHTML = '';
+
+            sorted.forEach((pc, i) => {
+                const val = Math.round(pc[metricKey] || 0);
+                const fillColor = getFillColor(val);
+                const statusLabel = val >= 85 ? '<span style="color:var(--danger);font-weight:600;font-size:12px;">Critical</span>' :
+                    val >= 60 ? '<span style="color:var(--warning);font-weight:600;font-size:12px;">Warning</span>' :
+                    '<span style="color:var(--accent);font-weight:600;font-size:12px;">Normal</span>';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="color:var(--fg-dim);font-family:'JetBrains Mono',monospace;font-size:12px;">#${i + 1}</td>
+                    <td class="pc-id">${pc.machine_id}</td>
+                    <td style="color:var(--fg-muted);font-size:12px;">${pc.hostname || '—'}</td>
+                    <td>
+                        <span class="usage-bar"><span class="usage-fill" style="width:${val}%;background:${fillColor};"></span></span>
+                        <span class="usage-val" style="color:${fillColor};">${val}%</span>
+                    </td>
+                    <td>${statusLabel}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function switchUsageTab(metric, btn) {
+            currentMetricTab = metric;
+            btn.parentElement.querySelectorAll('.card-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            renderUsageTable(metric);
+        }
+
+        // ============ MACHINE DETAIL MODAL ============
+        async function openMachineDetail(machineId) {
+            // Get machine details
+            const detail = await fetchJSON(`/api/machines/${machineId}`);
+            if (!detail) return;
+
+            // Create/show modal
+            let modal = document.getElementById('machineModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'machineModal';
+                modal.style.cssText = `
+                    position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+                    background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);`;
+                document.body.appendChild(modal);
+            }
+            modal.style.display = 'flex';
+            modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+            modal.innerHTML = `
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);
+                            width:90%;max-width:800px;max-height:90vh;overflow-y:auto;padding:24px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h2 style="font-size:18px;font-weight:700;color:var(--fg);">
+                            <i class="fas fa-desktop" style="color:var(--accent);margin-right:8px;"></i>${detail.machine_id}
+                        </h2>
+                        <button onclick="closeModal()" style="background:none;border:none;color:var(--fg-dim);font-size:20px;cursor:pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+                        <div style="font-size:12px;color:var(--fg-muted);"><strong>Hostname:</strong> ${detail.hostname || '—'}</div>
+                        <div style="font-size:12px;color:var(--fg-muted);"><strong>IP:</strong> ${detail.ip_address || '—'}</div>
+                        <div style="font-size:12px;color:var(--fg-muted);"><strong>MAC:</strong> ${detail.mac_address || '—'}</div>
+                        <div style="font-size:12px;color:var(--fg-muted);"><strong>OS:</strong> ${detail.os_info || '—'}</div>
+                        <div style="font-size:12px;color:var(--fg-muted);"><strong>First Seen:</strong> ${detail.first_seen || '—'}</div>
+                        <div style="font-size:12px;color:var(--fg-muted);"><strong>Last Seen:</strong> ${relativeTime(detail.last_seen)}</div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;">
+                        <div style="background:var(--bg-deep);padding:12px;border-radius:var(--radius);text-align:center;">
+                            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono';color:${getFillColor(detail.cpu_percent||0)}">${Math.round(detail.cpu_percent||0)}%</div>
+                            <div style="font-size:10px;color:var(--fg-dim);margin-top:4px;">CPU</div>
+                        </div>
+                        <div style="background:var(--bg-deep);padding:12px;border-radius:var(--radius);text-align:center;">
+                            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono';color:${getFillColor(detail.memory_percent||0)}">${Math.round(detail.memory_percent||0)}%</div>
+                            <div style="font-size:10px;color:var(--fg-dim);margin-top:4px;">Memory</div>
+                        </div>
+                        <div style="background:var(--bg-deep);padding:12px;border-radius:var(--radius);text-align:center;">
+                            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono';color:${getFillColor(detail.disk_io_percent||0)}">${Math.round(detail.disk_io_percent||0)}%</div>
+                            <div style="font-size:10px;color:var(--fg-dim);margin-top:4px;">Disk Activity</div>
+                        </div>
+                        <div style="background:var(--bg-deep);padding:12px;border-radius:var(--radius);text-align:center;">
+                            <div style="font-size:22px;font-weight:700;font-family:'JetBrains Mono';color:var(--info)">${(detail.disk_free_gb||0).toFixed(1)}</div>
+                            <div style="font-size:10px;color:var(--fg-dim);margin-top:4px;">GB Free</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom:12px;display:flex;gap:6px;">
+                        <button class="card-tab active" onclick="loadDetailChart('${detail.machine_id}', 1, this)">1H</button>
+                        <button class="card-tab" onclick="loadDetailChart('${detail.machine_id}', 6, this)">6H</button>
+                        <button class="card-tab" onclick="loadDetailChart('${detail.machine_id}', 12, this)">12H</button>
+                        <button class="card-tab" onclick="loadDetailChart('${detail.machine_id}', 24, this)">24H</button>
+                    </div>
+                    <div style="position:relative;height:250px;">
+                        <canvas id="detailChart"></canvas>
+                    </div>
+                </div>
+            `;
+
+            loadDetailChart(detail.machine_id, 1);
+        }
+
+        async function loadDetailChart(machineId, hours, btn) {
+            if (btn) {
+                btn.parentElement.querySelectorAll('.card-tab').forEach(t => t.classList.remove('active'));
+                btn.classList.add('active');
+            }
+
+            const data = await fetchJSON(`/api/machines/${machineId}/metrics?hours=${hours}`);
+            if (!data || !data.metrics || data.metrics.length === 0) return;
+
+            const labels = data.metrics.map(m => {
+                const d = new Date(m.timestamp + 'Z');
+                return d.getHours().toString().padStart(2, '0') + ':' +
+                       d.getMinutes().toString().padStart(2, '0');
+            });
+            const cpuData = data.metrics.map(m => m.cpu_percent);
+            const memData = data.metrics.map(m => m.memory_percent);
+            const diskData = data.metrics.map(m => m.disk_percent);
+
+            if (detailChartInstance) detailChartInstance.destroy();
+
+            const ctx = document.getElementById('detailChart');
+            if (!ctx) return;
+
+            detailChartInstance = new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'CPU %',
+                            data: cpuData,
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239,68,68,0.08)',
+                            borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0
+                        },
+                        {
+                            label: 'Memory %',
+                            data: memData,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59,130,246,0.08)',
+                            borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0
+                        },
+                        {
+                            label: 'Disk %',
+                            data: diskData,
+                            borderColor: '#0ea5e9',
+                            backgroundColor: 'rgba(14,165,233,0.08)',
+                            borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { labels: { color: '#64748b', font: { family: 'Space Grotesk', size: 11 } } },
+                        tooltip: {
+                            backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderWidth: 1,
+                            titleColor: '#0f172a', bodyColor: '#475569',
+                            titleFont: { family: 'Space Grotesk' },
+                            bodyFont: { family: 'JetBrains Mono', size: 12 },
+                            padding: 12, cornerRadius: 8,
+                            callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%` }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(203,213,225,0.5)' }, ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 10 } },
+                        y: { min: 0, max: 100, grid: { color: 'rgba(203,213,225,0.5)' }, ticks: { color: '#64748b', callback: v => v + '%' } }
+                    }
+                }
+            });
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('machineModal');
+            if (modal) modal.style.display = 'none';
+            if (detailChartInstance) { detailChartInstance.destroy(); detailChartInstance = null; }
+        }
+
+        // ============ CHARTS ============
+        function initCPUChart() {
+            const ctx = document.getElementById('cpuChart').getContext('2d');
+            const labels = [];
+            const now = new Date();
+            for (let i = 59; i >= 0; i--) {
+                const d = new Date(now - i * 60000);
+                labels.push(d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0'));
+            }
+
+            // Start with zeros, will be updated with real data
+            const avgData = labels.map(() => 0);
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+            gradient.addColorStop(0, 'rgba(14, 165, 233, 0.2)');
+            gradient.addColorStop(1, 'rgba(14, 165, 233, 0.0)');
+
+            cpuChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Average CPU',
+                        data: avgData,
+                        borderColor: '#0ea5e9',
+                        backgroundColor: gradient,
+                        borderWidth: 2, fill: true, tension: 0.4,
+                        pointRadius: 0, pointHoverRadius: 4,
+                        pointHoverBackgroundColor: '#0ea5e9'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: true, position: 'top', align: 'end',
+                            labels: { color: '#64748b', font: { family: 'Space Grotesk', size: 11 }, boxWidth: 12, boxHeight: 2, padding: 12 }
+                        },
+                        tooltip: {
+                            backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderWidth: 1,
+                            titleColor: '#0f172a', bodyColor: '#475569',
+                            titleFont: { family: 'Space Grotesk', weight: '600' },
+                            bodyFont: { family: 'JetBrains Mono', size: 12 },
+                            padding: 12, cornerRadius: 8,
+                            callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%` }
+                        }
+                    },
+                    scales: {
+                        x: { grid: { color: 'rgba(203, 213, 225, 0.5)', drawBorder: false },
+                             ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 }, maxTicksLimit: 8 },
+                             border: { display: false } },
+                        y: { min: 0, max: 100,
+                             grid: { color: 'rgba(203, 213, 225, 0.5)', drawBorder: false },
+                             ticks: { color: '#64748b', font: { family: 'JetBrains Mono', size: 10 }, callback: v => v + '%', stepSize: 25 },
+                             border: { display: false } }
+                    }
+                }
+            });
+        }
+
+        // CPU chart range state
+        let cpuChartMaxPoints = 60;
+
+        // Update CPU chart with current average
+        function updateCPUChart() {
+            if (!cpuChartInstance || allMachines.length === 0) return;
+            const onlinePCs = allMachines.filter(m => m.status === 'online');
+            if (onlinePCs.length === 0) return;
+            const avgCpu = onlinePCs.reduce((s, m) => s + (m.cpu_percent || 0), 0) / onlinePCs.length;
+
+            const data = cpuChartInstance.data.datasets[0].data;
+            data.push(Math.round(avgCpu * 10) / 10);
+            if (data.length > cpuChartMaxPoints) data.shift();
+
+            const labels = cpuChartInstance.data.labels;
+            const now = new Date();
+            labels.push(now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0'));
+            if (labels.length > cpuChartMaxPoints) labels.shift();
+
+            cpuChartInstance.update('none');
+        }
+
+        // Switch CPU chart time range
+        function switchCpuChartRange(minutes, btn) {
+            btn.parentElement.querySelectorAll('.card-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            cpuChartMaxPoints = minutes;
+            // Keep existing data, just allow more points to accumulate
+            showToast(`CPU chart set to ${minutes >= 60 ? (minutes/60) + 'H' : minutes + 'min'} range`);
+        }
+
+        function updateDonutChart() {
+            const onlinePCs = allMachines.filter(m => m.status === 'online');
+            const normalCount = onlinePCs.filter(p => (p.cpu_percent || 0) < 60).length;
+            const warnCount = onlinePCs.filter(p => (p.cpu_percent || 0) >= 60 && (p.cpu_percent || 0) < 85).length;
+            const critCount = onlinePCs.filter(p => (p.cpu_percent || 0) >= 85).length;
+            const offCount = allMachines.filter(p => p.status === 'offline').length;
+
+            document.getElementById('legendNormal').textContent = normalCount;
+            document.getElementById('legendWarning').textContent = warnCount;
+            document.getElementById('legendCritical').textContent = critCount;
+            document.getElementById('legendOffline').textContent = offCount;
+
+            const total = allMachines.length || 1;
+            const avgLoad = onlinePCs.length > 0
+                ? Math.round(onlinePCs.reduce((s, m) => s + (m.cpu_percent || 0), 0) / onlinePCs.length)
+                : 0;
+            document.getElementById('donutCenterVal').textContent = avgLoad + '%';
+
+            if (donutChartInstance) {
+                donutChartInstance.data.datasets[0].data = [normalCount, warnCount, critCount, offCount];
+                donutChartInstance.update('none');
+            }
+        }
+
+        function initDonutChart() {
+            const ctx = document.getElementById('donutChart').getContext('2d');
+
+            donutChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Normal', 'Warning', 'Critical', 'Offline'],
+                    datasets: [{
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#0ea5e9', '#f97316', '#ef4444', '#94a3b8'],
+                        borderColor: '#ffffff',
+                        borderWidth: 3,
+                        hoverBorderColor: '#ffffff',
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: true, cutout: '72%',
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderWidth: 1,
+                            titleColor: '#0f172a', bodyColor: '#475569',
+                            titleFont: { family: 'Space Grotesk', weight: '600' },
+                            bodyFont: { family: 'JetBrains Mono', size: 12 },
+                            padding: 12, cornerRadius: 8,
+                            callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed} PCs` }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ============ UPDATE STATS ============
+        function updateStats() {
+            fetchDashboardSummary();
+        }
+
+        // ============ UTILITIES ============
+        function refreshData() {
+            fetchMachines();
+            fetchAlerts();
+            fetchDashboardSummary();
+            renderActivities();
+            showToast('Data refreshed successfully');
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+            } else {
+                document.exitFullscreen().catch(() => {});
+            }
+        }
+
+        function showToast(message) {
+            const existing = document.querySelector('.toast-notification');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            toast.style.cssText = `
+                position: fixed; bottom: 24px; right: 24px;
+                background: var(--bg-card); border: 1px solid var(--accent);
+                border-radius: var(--radius); padding: 14px 20px;
+                color: var(--accent); font-family: 'Space Grotesk', sans-serif;
+                font-size: 13px; font-weight: 600; z-index: 9999;
+                display: flex; align-items: center; gap: 10px;
+                box-shadow: 0 8px 32px rgba(14, 165, 233, 0.15);
+                animation: fadeUp 0.3s ease;
+            `;
+            toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 2500);
+        }
+
+        // ============ LAB TABS ============
+        let currentLabTab = 'all';
+        function switchLab(key, btn) {
+            btn.parentElement.querySelectorAll('.card-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            currentLabTab = key;
+            renderPCGrid();
+            // Update the card title
+            const labNames = { 'all': 'All Labs', 'A': 'Lab A (CS101)', 'B': 'Lab B (CS102)', 'C': 'Lab C (CS103)' };
+            const titleEl = btn.closest('.card').querySelector('.card-title');
+            if (titleEl) titleEl.innerHTML = `<i class="fas fa-th"></i> Computer Nodes &mdash; ${labNames[key] || 'Lab ' + key}`;
+        }
+
+        // ============ MOBILE SIDEBAR ============
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+
+        function closeSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+        }
+
+        // ============ SEARCH ============
+        let searchQuery = '';
+        function handleSearch(query) {
+            searchQuery = query.toLowerCase().trim();
+            renderPCGrid();
+            renderUsageTable(currentMetricTab);
+        }
+
+        // ============ LAB FILTER ============
+        let labFilter = 'all';
+        function filterByLab(value) {
+            labFilter = value;
+            renderPCGrid();
+            renderUsageTable(currentMetricTab);
+            updateDonutChart();
+        }
+
+        function getFilteredMachines() {
+            let machines = allMachines;
+            // Sidebar lab filter (dropdown)
+            if (labFilter !== 'all') {
+                machines = machines.filter(m => m.machine_id.toLowerCase().startsWith(labFilter.toLowerCase()));
+            }
+            // Lab tab filter (Lab A/B/C buttons in PC grid card)
+            if (currentLabTab && currentLabTab !== 'all') {
+                const prefix = currentLabTab.toLowerCase();
+                machines = machines.filter(m => {
+                    const id = m.machine_id.toLowerCase();
+                    // Match patterns like "lab-a-01", "laba01", "a-01", etc.
+                    return id.includes('lab') && id.includes(prefix) ||
+                           id.startsWith(prefix) ||
+                           id.includes('-' + prefix + '-') ||
+                           id.includes('_' + prefix + '_');
+                });
+            }
+            // Search filter
+            if (searchQuery) {
+                machines = machines.filter(m =>
+                    (m.machine_id || '').toLowerCase().includes(searchQuery) ||
+                    (m.hostname || '').toLowerCase().includes(searchQuery) ||
+                    (m.ip_address || '').toLowerCase().includes(searchQuery) ||
+                    (m.os_info || '').toLowerCase().includes(searchQuery)
+                );
+            }
+            return machines;
+        }
+
+        // ============ CSV EXPORT ============
+        function exportCSV() {
+            const machines = allMachines;
+            if (machines.length === 0) {
+                showToast('No data to export');
+                return;
+            }
+            const headers = ['Machine ID', 'Hostname', 'IP Address', 'OS', 'Status', 'CPU %', 'Memory %', 'Disk %', 'Disk Free GB', 'Last Seen'];
+            const rows = machines.map(m => [
+                m.machine_id, m.hostname || '', m.ip_address || '', m.os_info || '',
+                m.status, Math.round(m.cpu_percent || 0), Math.round(m.memory_percent || 0),
+                Math.round(m.disk_io_percent || 0), (m.disk_free_gb || 0).toFixed(1), m.last_seen || ''
+            ]);
+
+            const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `lab_monitor_export_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('CSV exported successfully');
+        }
+
+        // ============ ADD COMPUTER MODAL ============
+        function showAddComputerModal() {
+            let modal = document.getElementById('addComputerModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'addComputerModal';
+                modal.style.cssText = `
+                    position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+                    background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);`;
+                document.body.appendChild(modal);
+            }
+            modal.style.display = 'flex';
+            modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+            modal.innerHTML = `
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);
+                            width:90%;max-width:600px;padding:28px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h2 style="font-size:18px;font-weight:700;color:var(--fg);">
+                            <i class="fas fa-plus-circle" style="color:var(--accent);margin-right:8px;"></i>Add New Computer
+                        </h2>
+                        <button onclick="document.getElementById('addComputerModal').style.display='none'" style="background:none;border:none;color:var(--fg-dim);font-size:20px;cursor:pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div style="background:var(--bg-deep);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
+                        <h3 style="font-size:13px;font-weight:600;color:var(--fg);margin-bottom:10px;">
+                            <i class="fas fa-terminal" style="color:var(--accent);margin-right:6px;"></i>Setup Instructions
+                        </h3>
+                        <ol style="color:var(--fg-muted);font-size:12px;line-height:1.8;padding-left:20px;margin:0;">
+                            <li>Copy <code style="background:var(--bg-card);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono';font-size:11px;">agent.py</code> to the target computer</li>
+                            <li>Install dependencies: <code style="background:var(--bg-card);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono';font-size:11px;">pip install psutil requests</code></li>
+                            <li>Edit agent.py — set a unique <code style="background:var(--bg-card);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono';font-size:11px;">MACHINE_ID</code></li>
+                            <li>Set <code style="background:var(--bg-card);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono';font-size:11px;">SERVER_URL</code> to this server's IP</li>
+                            <li>Run: <code style="background:var(--bg-card);padding:2px 6px;border-radius:4px;font-family:'JetBrains Mono';font-size:11px;">python agent.py</code></li>
+                        </ol>
+                    </div>
+
+                    <div style="background:var(--bg-deep);border-radius:var(--radius);padding:16px;">
+                        <h3 style="font-size:13px;font-weight:600;color:var(--fg);margin-bottom:8px;">
+                            <i class="fas fa-server" style="color:var(--accent);margin-right:6px;"></i>Server Info
+                        </h3>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div style="font-size:11px;color:var(--fg-dim);">Server URL:</div>
+                            <div style="font-size:11px;font-family:'JetBrains Mono';color:var(--fg);">http://${window.location.hostname}:5000/api/metrics</div>
+                            <div style="font-size:11px;color:var(--fg-dim);">Connected Machines:</div>
+                            <div style="font-size:11px;font-family:'JetBrains Mono';color:var(--fg);">${allMachines.length}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============ PAGE NAVIGATION ============
+        let currentPage = 'dashboard';
+        function navigateTo(page, btn) {
+            currentPage = page;
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            const contentArea = document.querySelector('.content-area');
+
+            if (page === 'dashboard') {
+                // Show the original dashboard content
+                contentArea.querySelectorAll(':scope > *').forEach(el => el.style.display = '');
+                const pageView = document.getElementById('pageView');
+                if (pageView) pageView.remove();
+                return;
+            }
+
+            // Hide all dashboard-specific content
+            contentArea.querySelectorAll(':scope > *').forEach(el => el.style.display = 'none');
+
+            // Create or update page view container
+            let pageView = document.getElementById('pageView');
+            if (!pageView) {
+                pageView = document.createElement('div');
+                pageView.id = 'pageView';
+                pageView.className = 'animate-in';
+                contentArea.appendChild(pageView);
+            }
+            pageView.style.display = '';
+
+            switch (page) {
+                case 'computers': renderComputersPage(pageView); break;
+                case 'network': renderNetworkPage(pageView); break;
+                case 'alerts': renderAlertsPage(pageView); break;
+                case 'labs': renderLabsPage(pageView); break;
+                case 'reports': renderReportsPage(pageView); break;
+                case 'settings': renderSettingsPage(pageView); break;
+                case 'schedules': renderScheduleManager(pageView); break;
+                default: renderPlaceholderPage(pageView, page); break;
+            }
+        }
+
+        // --- Computers Page ---
+        function renderComputersPage(container) {
+            const machines = allMachines;
+            const online = machines.filter(m => m.status === 'online').length;
+            const offline = machines.length - online;
+            container.innerHTML = `
+                <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <div>
+                        <h1 class="page-title">All Computers</h1>
+                        <p class="page-subtitle">${machines.length} machines · ${online} online · ${offline} offline</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="showAddComputerModal()"><i class="fas fa-plus"></i> Add Computer</button>
+                </div>
+                <div class="card">
+                    <div class="card-body" style="padding:0;">
+                        <table class="usage-table" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th>Machine ID</th><th>Hostname</th><th>IP Address</th><th>OS</th>
+                                    <th>CPU</th><th>Memory</th><th>Disk</th><th>Status</th><th>Last Seen</th><th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${machines.map(m => {
+                                    const statusColor = m.status === 'online' ? 'var(--accent)' : 'var(--danger)';
+                                    const statusBg = m.status === 'online' ? 'var(--accent-dim)' : 'var(--danger-glow)';
+                                    return `<tr>
+                                        <td class="pc-id" style="cursor:pointer;" onclick="openMachineDetail('${m.machine_id}')">${m.machine_id}</td>
+                                        <td style="font-size:12px;color:var(--fg-muted);">${m.hostname || '—'}</td>
+                                        <td style="font-size:12px;color:var(--fg-dim);font-family:'JetBrains Mono';">${m.ip_address || '—'}</td>
+                                        <td style="font-size:11px;color:var(--fg-dim);">${(m.os_info || '—').substring(0, 25)}</td>
+                                        <td><span style="color:${getFillColor(m.cpu_percent||0)};font-weight:600;font-size:12px;">${Math.round(m.cpu_percent||0)}%</span></td>
+                                        <td><span style="color:${getFillColor(m.memory_percent||0)};font-weight:600;font-size:12px;">${Math.round(m.memory_percent||0)}%</span></td>
+                                        <td><span style="color:${getFillColor(m.disk_io_percent||0)};font-weight:600;font-size:12px;">${Math.round(m.disk_io_percent||0)}%</span></td>
+                                        <td><span style="background:${statusBg};color:${statusColor};padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;">${m.status}</span></td>
+                                        <td style="font-size:11px;color:var(--fg-dim);">${relativeTime(m.last_seen)}</td>
+                                        <td><button onclick="openMachineDetail('${m.machine_id}')" style="background:var(--accent-dim);color:var(--accent);border:none;border-radius:var(--radius-sm);padding:4px 10px;font-size:10px;font-weight:600;cursor:pointer;font-family:'Space Grotesk';">Details</button></td>
+                                    </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Alerts Page ---
+        async function renderAlertsPage(container) {
+            const dataAll = await fetchJSON('/api/alerts?acknowledged=all');
+            const alerts = dataAll ? dataAll.alerts : [];
+            const unack = alerts.filter(a => !a.acknowledged);
+            const acked = alerts.filter(a => a.acknowledged);
+
+            container.innerHTML = `
+                <div class="page-header" style="margin-bottom:20px;">
+                    <h1 class="page-title">Alert Management</h1>
+                    <p class="page-subtitle">${unack.length} active alerts · ${acked.length} acknowledged</p>
+                </div>
+                <div class="card" style="margin-bottom:20px;">
+                    <div class="card-header"><div class="card-title"><i class="fas fa-exclamation-circle"></i> Active Alerts (${unack.length})</div></div>
+                    <div class="card-body">${unack.length === 0 ? '<div style="text-align:center;padding:30px;color:var(--fg-dim);"><i class="fas fa-check-circle" style="font-size:24px;color:var(--accent);display:block;margin-bottom:8px;"></i>All clear — no active alerts</div>' :
+                        unack.map(a => `<div class="alert-item ${getAlertClass(a.severity)}" style="margin-bottom:8px;">
+                            <div class="alert-icon"><i class="fas ${getAlertIcon(a.alert_type)}"></i></div>
+                            <div class="alert-content">
+                                <div class="alert-title">${a.alert_type.replace('_',' ').toUpperCase()} — ${a.machine_id}</div>
+                                <div class="alert-desc">${a.message}</div>
+                                <div class="alert-time">${relativeTime(a.timestamp)}</div>
+                            </div>
+                            <button onclick="acknowledgeAlert(${a.id}, this); setTimeout(()=>navigateTo('alerts'),600);" style="background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);padding:6px 14px;font-size:11px;font-weight:600;cursor:pointer;font-family:'Space Grotesk';align-self:center;">Acknowledge</button>
+                        </div>`).join('')}
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><div class="card-title"><i class="fas fa-check-circle"></i> Acknowledged (${acked.length})</div></div>
+                    <div class="card-body">${acked.length === 0 ? '<div style="text-align:center;padding:20px;color:var(--fg-dim);">No acknowledged alerts yet</div>' :
+                        acked.slice(0, 20).map(a => `<div class="alert-item info" style="margin-bottom:8px;opacity:0.6;">
+                            <div class="alert-icon"><i class="fas ${getAlertIcon(a.alert_type)}"></i></div>
+                            <div class="alert-content">
+                                <div class="alert-title">${a.alert_type.replace('_',' ').toUpperCase()} — ${a.machine_id}</div>
+                                <div class="alert-desc">${a.message}</div>
+                                <div class="alert-time">${relativeTime(a.timestamp)}</div>
+                            </div>
+                        </div>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Network Page ---
+        function renderNetworkPage(container) {
+            const online = allMachines.filter(m => m.status === 'online');
+            const offline = allMachines.filter(m => m.status !== 'online');
+            container.innerHTML = `
+                <div class="page-header" style="margin-bottom:20px;">
+                    <h1 class="page-title">Network Overview</h1>
+                    <p class="page-subtitle">Live connectivity status of all monitored machines</p>
+                </div>
+                <div class="stats-grid" style="margin-bottom:20px;">
+                    <div class="stat-card accent"><div class="stat-icon"><i class="fas fa-wifi"></i></div><div class="stat-label">Online</div><div class="stat-value">${online.length}</div></div>
+                    <div class="stat-card danger"><div class="stat-icon"><i class="fas fa-times-circle"></i></div><div class="stat-label">Offline</div><div class="stat-value">${offline.length}</div></div>
+                    <div class="stat-card info"><div class="stat-icon"><i class="fas fa-network-wired"></i></div><div class="stat-label">Total</div><div class="stat-value">${allMachines.length}</div></div>
+                    <div class="stat-card warning"><div class="stat-icon"><i class="fas fa-clock"></i></div><div class="stat-label">Uptime</div><div class="stat-value">${allMachines.length > 0 ? Math.round(online.length / allMachines.length * 100) : 0}%</div></div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><div class="card-title"><i class="fas fa-map-marker-alt"></i> Machine Connectivity Map</div></div>
+                    <div class="card-body">
+                        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;">
+                            ${allMachines.map(m => `
+                                <div style="background:${m.status==='online'?'var(--accent-dim)':'var(--danger-glow)'};border:1px solid ${m.status==='online'?'var(--accent)':'var(--danger)'};border-radius:var(--radius);padding:12px;text-align:center;cursor:pointer;" onclick="openMachineDetail('${m.machine_id}')">
+                                    <i class="fas fa-desktop" style="font-size:18px;color:${m.status==='online'?'var(--accent)':'var(--danger)'};display:block;margin-bottom:6px;"></i>
+                                    <div style="font-size:12px;font-weight:600;color:var(--fg);">${m.machine_id}</div>
+                                    <div style="font-size:10px;color:var(--fg-dim);">${m.ip_address || '—'}</div>
+                                    <div style="font-size:10px;color:${m.status==='online'?'var(--accent)':'var(--danger)'};font-weight:600;margin-top:4px;">${m.status.toUpperCase()}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Labs Page ---
+        function renderLabsPage(container) {
+            // Group machines by prefix
+            const groups = {};
+            allMachines.forEach(m => {
+                const prefix = m.machine_id.replace(/[0-9-]+$/, '') || 'Other';
+                if (!groups[prefix]) groups[prefix] = [];
+                groups[prefix].push(m);
+            });
+
+            container.innerHTML = `
+                <div class="page-header" style="margin-bottom:20px;">
+                    <h1 class="page-title">Lab Management</h1>
+                    <p class="page-subtitle">${Object.keys(groups).length} lab group(s) detected · ${allMachines.length} total machines</p>
+                </div>
+                ${Object.entries(groups).map(([lab, machines]) => {
+                    const online = machines.filter(m => m.status === 'online').length;
+                    const avgCpu = machines.filter(m=>m.status==='online').reduce((s,m) => s + (m.cpu_percent||0), 0) / (online||1);
+                    return `
+                    <div class="card" style="margin-bottom:16px;">
+                        <div class="card-header">
+                            <div class="card-title"><i class="fas fa-door-open"></i> ${lab} (${machines.length} PCs)</div>
+                            <span style="font-size:12px;color:var(--accent);font-weight:600;">${online}/${machines.length} online</span>
+                        </div>
+                        <div class="card-body">
+                            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;">
+                                ${machines.map(m => `
+                                    <div class="pc-node ${m.status}" style="cursor:pointer;padding:10px;" onclick="openMachineDetail('${m.machine_id}')">
+                                        <div class="pc-header"><span class="pc-name">${m.machine_id}</span><span class="pc-status-dot"></span></div>
+                                        <div style="font-size:10px;color:var(--fg-dim);margin-top:4px;">CPU: ${Math.round(m.cpu_percent||0)}%</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    </div>`;
+                }).join('')}
+            `;
+        }
+
+        // --- Reports Page ---
+        function renderReportsPage(container) {
+            const online = allMachines.filter(m => m.status === 'online');
+            const avgCpu = online.length > 0 ? (online.reduce((s,m) => s + (m.cpu_percent||0), 0) / online.length).toFixed(1) : '0';
+            const avgMem = online.length > 0 ? (online.reduce((s,m) => s + (m.memory_percent||0), 0) / online.length).toFixed(1) : '0';
+            const avgDisk = online.length > 0 ? (online.reduce((s,m) => s + (m.disk_io_percent||0), 0) / online.length).toFixed(1) : '0';
+            const criticals = online.filter(m => (m.cpu_percent||0) >= 85).length;
+
+            container.innerHTML = `
+                <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <div>
+                        <h1 class="page-title">System Reports</h1>
+                        <p class="page-subtitle">Generated ${new Date().toLocaleString()}</p>
+                    </div>
+                    <button class="btn btn-ghost" onclick="exportCSV()"><i class="fas fa-download"></i> Export CSV</button>
+                </div>
+                <div class="stats-grid" style="margin-bottom:20px;">
+                    <div class="stat-card accent"><div class="stat-label">Avg CPU</div><div class="stat-value">${avgCpu}%</div></div>
+                    <div class="stat-card info"><div class="stat-label">Avg Memory</div><div class="stat-value">${avgMem}%</div></div>
+                    <div class="stat-card warning"><div class="stat-label">Avg Disk Activity</div><div class="stat-value">${avgDisk}%</div></div>
+                    <div class="stat-card danger"><div class="stat-label">Critical Machines</div><div class="stat-value">${criticals}</div></div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><div class="card-title"><i class="fas fa-table"></i> Full Machine Report</div></div>
+                    <div class="card-body" style="padding:0;">
+                        <table class="usage-table" style="width:100%;">
+                            <thead><tr><th>Machine</th><th>Status</th><th>CPU</th><th>Memory</th><th>Disk</th><th>Free Space</th><th>Last Seen</th></tr></thead>
+                            <tbody>
+                                ${allMachines.map(m => `<tr>
+                                    <td class="pc-id">${m.machine_id}</td>
+                                    <td><span style="color:${m.status==='online'?'var(--accent)':'var(--danger)'};font-weight:600;font-size:12px;">${m.status}</span></td>
+                                    <td style="color:${getFillColor(m.cpu_percent||0)};font-weight:600;font-size:12px;">${Math.round(m.cpu_percent||0)}%</td>
+                                    <td style="color:${getFillColor(m.memory_percent||0)};font-weight:600;font-size:12px;">${Math.round(m.memory_percent||0)}%</td>
+                                    <td style="color:${getFillColor(m.disk_io_percent||0)};font-weight:600;font-size:12px;">${Math.round(m.disk_io_percent||0)}%</td>
+                                    <td style="font-size:12px;">${(m.disk_free_gb||0).toFixed(1)} GB</td>
+                                    <td style="font-size:11px;color:var(--fg-dim);">${relativeTime(m.last_seen)}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Settings Page ---
+        function renderSettingsPage(container) {
+            container.innerHTML = `
+                <div class="page-header" style="margin-bottom:20px;">
+                    <h1 class="page-title">Settings</h1>
+                    <p class="page-subtitle">Configure monitoring preferences</p>
+                </div>
+                <div class="card" style="margin-bottom:16px;">
+                    <div class="card-header"><div class="card-title"><i class="fas fa-bell"></i> Alert Thresholds</div></div>
+                    <div class="card-body">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            <div>
+                                <label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:6px;">CPU Critical Alert (%)</label>
+                                <input type="number" value="90" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'JetBrains Mono';font-size:13px;background:var(--bg-main);color:var(--fg);">
+                            </div>
+                            <div>
+                                <label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:6px;">CPU Warning Alert (%)</label>
+                                <input type="number" value="75" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'JetBrains Mono';font-size:13px;background:var(--bg-main);color:var(--fg);">
+                            </div>
+                            <div>
+                                <label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:6px;">Disk Free Critical (GB)</label>
+                                <input type="number" value="5" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'JetBrains Mono';font-size:13px;background:var(--bg-main);color:var(--fg);">
+                            </div>
+                            <div>
+                                <label style="font-size:12px;color:var(--fg-muted);display:block;margin-bottom:6px;">Offline Timeout (seconds)</label>
+                                <input type="number" value="30" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'JetBrains Mono';font-size:13px;background:var(--bg-main);color:var(--fg);">
+                            </div>
+                        </div>
+                        <div style="margin-top:16px;text-align:right;">
+                            <button class="btn btn-primary" onclick="showToast('Settings are managed in server.py')"><i class="fas fa-save"></i> Save Settings</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><div class="card-title"><i class="fas fa-info-circle"></i> System Info</div></div>
+                    <div class="card-body">
+                        <div style="display:grid;grid-template-columns:200px 1fr;gap:8px;font-size:12px;">
+                            <span style="color:var(--fg-dim);font-weight:600;">Server Address:</span>
+                            <span style="font-family:'JetBrains Mono';color:var(--fg);">${window.location.origin}</span>
+                            <span style="color:var(--fg-dim);font-weight:600;">API Endpoint:</span>
+                            <span style="font-family:'JetBrains Mono';color:var(--fg);">${window.location.origin}/api/metrics</span>
+                            <span style="color:var(--fg-dim);font-weight:600;">Connected Machines:</span>
+                            <span style="font-family:'JetBrains Mono';color:var(--fg);">${allMachines.length}</span>
+                            <span style="color:var(--fg-dim);font-weight:600;">Agent Send Interval:</span>
+                            <span style="font-family:'JetBrains Mono';color:var(--fg);">5 seconds</span>
+                            <span style="color:var(--fg-dim);font-weight:600;">Data Retention:</span>
+                            <span style="font-family:'JetBrains Mono';color:var(--fg);">7 days</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- Placeholder Page ---
+        function renderPlaceholderPage(container, page) {
+            const titles = { users: 'User Management', schedules: 'Schedule Manager', integrations: 'Integrations' };
+            const icons = { users: 'fa-users', schedules: 'fa-calendar-alt', integrations: 'fa-plug' };
+            container.innerHTML = `
+                <div class="page-header" style="margin-bottom:20px;">
+                    <h1 class="page-title">${titles[page] || page}</h1>
+                    <p class="page-subtitle">Feature module</p>
+                </div>
+                <div class="card">
+                    <div class="card-body" style="text-align:center;padding:60px 20px;">
+                        <i class="fas ${icons[page] || 'fa-cog'}" style="font-size:48px;color:var(--accent);display:block;margin-bottom:16px;opacity:0.4;"></i>
+                        <h3 style="font-size:16px;color:var(--fg);margin-bottom:8px;">${titles[page] || page} — Coming Soon</h3>
+                        <p style="font-size:13px;color:var(--fg-dim);max-width:400px;margin:0 auto;">
+                            This feature is planned for a future release. The monitoring core (Dashboard, Computers, Alerts, Network, Labs, Reports) is fully operational.
+                        </p>
+                        <button class="btn btn-ghost" style="margin-top:20px;" onclick="navigateTo('dashboard', document.querySelector('.nav-item'))">
+                            <i class="fas fa-arrow-left"></i> Back to Dashboard
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // ============ SCHEDULE MANAGER STATE & HANDLERS ============
+        let currentScheduleView = 'month'; // 'month' | 'week' | 'day'
+        let currentScheduleDate = new Date();
+        let currentScheduleLab = 'all';
+        let allReservations = [];
+
+        function getLabColorClass(colorOrLab) {
+            if (!colorOrLab) return 'res-laba';
+            const str = colorOrLab.toLowerCase();
+            if (str.includes('ailab') || str.includes('ai research')) return 'res-ailab';
+            if (str.includes('vrlab') || str.includes('vr') || str.includes('network')) return 'res-vrlab';
+            if (str.includes('labb') || str.includes('lab b') || str.includes('cs102')) return 'res-labb';
+            if (str.includes('labc') || str.includes('lab c') || str.includes('cs103')) return 'res-labc';
+            return 'res-laba';
+        }
+
+        async function fetchReservations() {
+            const url = currentScheduleLab && currentScheduleLab !== 'all'
+                ? `/api/reservations?lab_id=${encodeURIComponent(currentScheduleLab)}`
+                : '/api/reservations';
+            const data = await fetchJSON(url);
+            if (data && data.reservations) {
+                allReservations = data.reservations;
+            }
+        }
+
+        async function refreshScheduleManager() {
+            await fetchReservations();
+            renderScheduleCalendarBody();
+            showToast('Schedule data refreshed');
+        }
+
+        async function renderScheduleManager(container) {
+            await fetchReservations();
+            
+            // Generate Title based on view & date
+            let dateTitle = '';
+            const yr = currentScheduleDate.getFullYear();
+            const moName = currentScheduleDate.toLocaleString('default', { month: 'long' });
+            
+            if (currentScheduleView === 'month') {
+                dateTitle = `${moName} ${yr}`;
+            } else if (currentScheduleView === 'week') {
+                const weekStart = new Date(currentScheduleDate);
+                weekStart.setDate(currentScheduleDate.getDate() - currentScheduleDate.getDay());
+                const weekEnd = new Date(weekStart);
+                weekEnd.setDate(weekStart.getDate() + 6);
+                const startMonth = weekStart.toLocaleString('default', { month: 'short' });
+                const endMonth = weekEnd.toLocaleString('default', { month: 'short' });
+                dateTitle = `${startMonth} ${weekStart.getDate()} - ${endMonth} ${weekEnd.getDate()}, ${yr}`;
+            } else {
+                dateTitle = currentScheduleDate.toLocaleDateString('default', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+            }
+
+            container.innerHTML = `
+                <div class="page-header animate-in" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                    <div>
+                        <h1 class="page-title"><i class="fas fa-calendar-alt" style="color:var(--accent);margin-right:8px;"></i>Schedule Manager</h1>
+                        <p class="page-subtitle">Interactive lab reservations & room scheduling control panel</p>
+                    </div>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <button class="btn btn-ghost" onclick="refreshScheduleManager()" title="Refresh Schedule"><i class="fas fa-sync-alt"></i> Refresh Schedule</button>
+                        <button class="btn btn-primary" onclick="showCreateReservationModal()"><i class="fas fa-plus"></i> + Create Reservation</button>
+                    </div>
+                </div>
+
+                <div class="schedule-container animate-in">
+                    <!-- Toolbar Top Bar -->
+                    <div class="schedule-toolbar">
+                        <div class="schedule-nav-group">
+                            <button class="schedule-nav-btn" onclick="changeScheduleDate(-1)" title="Previous"><i class="fas fa-chevron-left"></i> Prev</button>
+                            <button class="schedule-nav-btn" onclick="changeScheduleDate('today')">Today</button>
+                            <button class="schedule-nav-btn" onclick="changeScheduleDate(1)" title="Next">Next <i class="fas fa-chevron-right"></i></button>
+                            <button class="schedule-nav-btn" onclick="refreshScheduleManager()" title="Manual Refresh"><i class="fas fa-sync-alt"></i> Refresh</button>
+                            <span class="schedule-current-title" style="margin-left:8px;">${dateTitle}</span>
+                        </div>
+
+                        <div class="schedule-filters">
+                            <select class="schedule-select" aria-label="Filter by room or lab" onchange="filterScheduleByLab(this.value)">
+                                <option value="all" ${currentScheduleLab==='all'?'selected':''}>All Labs & Rooms</option>
+                                <option value="Lab A (CS101)" ${currentScheduleLab==='Lab A (CS101)'?'selected':''}>Lab A (CS101)</option>
+                                <option value="Lab B (CS102)" ${currentScheduleLab==='Lab B (CS102)'?'selected':''}>Lab B (CS102)</option>
+                                <option value="Lab C (CS103)" ${currentScheduleLab==='Lab C (CS103)'?'selected':''}>Lab C (CS103)</option>
+                                <option value="AI Research Lab" ${currentScheduleLab==='AI Research Lab'?'selected':''}>AI Research Lab</option>
+                                <option value="VR & Network Lab" ${currentScheduleLab==='VR & Network Lab'?'selected':''}>VR & Network Lab</option>
+                            </select>
+
+                            <div class="view-toggles">
+                                <button class="view-toggle-btn ${currentScheduleView==='month'?'active':''}" onclick="switchScheduleView('month')">Month</button>
+                                <button class="view-toggle-btn ${currentScheduleView==='week'?'active':''}" onclick="switchScheduleView('week')">Week</button>
+                                <button class="view-toggle-btn ${currentScheduleView==='day'?'active':''}" onclick="switchScheduleView('day')">Day</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Color Legend Bar -->
+                    <div class="schedule-legend">
+                        <span style="font-weight:700;color:var(--fg);">Rooms:</span>
+                        <div class="legend-tag"><span class="legend-color-dot" style="background:#0ea5e9;"></span> Lab A (CS101)</div>
+                        <div class="legend-tag"><span class="legend-color-dot" style="background:#10b981;"></span> Lab B (CS102)</div>
+                        <div class="legend-tag"><span class="legend-color-dot" style="background:#8b5cf6;"></span> Lab C (CS103)</div>
+                        <div class="legend-tag"><span class="legend-color-dot" style="background:#f59e0b;"></span> AI Research Lab</div>
+                        <div class="legend-tag"><span class="legend-color-dot" style="background:#f43f5e;"></span> VR & Network Lab</div>
+                        <span style="margin-left:auto;font-size:11px;color:var(--fg-dim);">${allReservations.length} reservation(s) total</span>
+                    </div>
+
+                    <!-- Calendar Main Area -->
+                    <div class="calendar-card" id="scheduleCalendarBody">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            `;
+
+            renderScheduleCalendarBody();
+        }
+
+        function renderScheduleCalendarBody() {
+            const bodyContainer = document.getElementById('scheduleCalendarBody');
+            if (!bodyContainer) return;
+
+            if (currentScheduleView === 'month') {
+                renderMonthView(bodyContainer);
+            } else if (currentScheduleView === 'week') {
+                renderWeekView(bodyContainer);
+            } else if (currentScheduleView === 'day') {
+                renderDayView(bodyContainer);
+            }
+        }
+
+        function changeScheduleDate(dir) {
+            if (dir === 'today') {
+                currentScheduleDate = new Date();
+            } else {
+                if (currentScheduleView === 'month') {
+                    currentScheduleDate.setMonth(currentScheduleDate.getMonth() + dir);
+                } else if (currentScheduleView === 'week') {
+                    currentScheduleDate.setDate(currentScheduleDate.getDate() + (dir * 7));
+                } else if (currentScheduleView === 'day') {
+                    currentScheduleDate.setDate(currentScheduleDate.getDate() + dir);
+                }
+            }
+            const pageView = document.getElementById('pageView');
+            if (pageView) renderScheduleManager(pageView);
+        }
+
+        function switchScheduleView(view) {
+            currentScheduleView = view;
+            const pageView = document.getElementById('pageView');
+            if (pageView) renderScheduleManager(pageView);
+        }
+
+        function filterScheduleByLab(lab) {
+            currentScheduleLab = lab;
+            const pageView = document.getElementById('pageView');
+            if (pageView) renderScheduleManager(pageView);
+        }
+
+        // ============ RENDER MONTH VIEW ============
+        function renderMonthView(container) {
+            const year = currentScheduleDate.getFullYear();
+            const month = currentScheduleDate.getMonth();
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+
+            const startDayIndex = firstDay.getDay(); // 0 = Sun
+            const totalDays = lastDay.getDate();
+
+            const prevMonthLastDay = new Date(year, month, 0).getDate();
+
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+            let html = `
+                <div class="month-grid">
+                    <div class="month-header-cell">Sun</div>
+                    <div class="month-header-cell">Mon</div>
+                    <div class="month-header-cell">Tue</div>
+                    <div class="month-header-cell">Wed</div>
+                    <div class="month-header-cell">Thu</div>
+                    <div class="month-header-cell">Fri</div>
+                    <div class="month-header-cell">Sat</div>
+            `;
+
+            let cellCount = 0;
+
+            // Previous month trailing days
+            for (let i = startDayIndex - 1; i >= 0; i--) {
+                const dayNum = prevMonthLastDay - i;
+                html += `
+                    <div class="month-day-cell other-month">
+                        <div class="day-num-wrap"><span class="day-num">${dayNum}</span></div>
+                    </div>
+                `;
+                cellCount++;
+            }
+
+            // Current month days
+            for (let d = 1; d <= totalDays; d++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const isToday = (dateStr === todayStr);
+
+                // Find reservations for this date
+                const dayEvents = allReservations.filter(r => r.date === dateStr);
+
+                html += `
+                    <div class="month-day-cell ${isToday ? 'is-today' : ''}" onclick="showCreateReservationModal('${dateStr}')">
+                        <div class="day-num-wrap">
+                            <span class="day-num">${d}</span>
+                            ${dayEvents.length > 0 ? `<span style="font-size:9.5px;font-weight:700;color:var(--accent);background:var(--accent-glow);padding:1px 5px;border-radius:10px;">${dayEvents.length}</span>` : ''}
+                        </div>
+                        ${dayEvents.map(ev => {
+                            const colorCls = getLabColorClass(ev.color || ev.lab_id);
+                            return `
+                                <div class="event-pill ${colorCls}" onclick="event.stopPropagation(); showReservationDetailModal(${ev.id})">
+                                    <span class="event-pill-title">${ev.title}</span>
+                                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                                        <span class="event-pill-room">${ev.lab_id}</span>
+                                        <span class="event-pill-time">${ev.start_time} - ${ev.end_time}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                cellCount++;
+            }
+
+            // Next month leading days to complete grid (up to 35 or 42)
+            const totalGridCells = cellCount <= 35 ? 35 : 42;
+            const remainingCells = totalGridCells - cellCount;
+            for (let d = 1; d <= remainingCells; d++) {
+                html += `
+                    <div class="month-day-cell other-month">
+                        <div class="day-num-wrap"><span class="day-num">${d}</span></div>
+                    </div>
+                `;
+            }
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        // ============ RENDER WEEK VIEW ============
+        function renderWeekView(container) {
+            const startOfWeek = new Date(currentScheduleDate);
+            startOfWeek.setDate(currentScheduleDate.getDate() - currentScheduleDate.getDay());
+
+            const days = [];
+            const today = new Date();
+            const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+            for (let i = 0; i < 7; i++) {
+                const d = new Date(startOfWeek);
+                d.setDate(startOfWeek.getDate() + i);
+                const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+                days.push({
+                    date: d,
+                    dateStr: dStr,
+                    dayName: d.toLocaleString('default', { weekday: 'short' }),
+                    dayNum: d.getDate(),
+                    isToday: dStr === todayStr
+                });
+            }
+
+            // Hours 8 AM to 8 PM (08:00 to 20:00)
+            const hours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+
+            let html = `
+                <div class="week-grid-container">
+                    <div class="week-grid-header">
+                        <div class="week-time-col-head"><i class="fas fa-clock"></i> Time</div>
+                        ${days.map(d => `
+                            <div class="week-day-head ${d.isToday ? 'is-today' : ''}">
+                                <div>${d.dayName}</div>
+                                <div style="font-size:14px;font-weight:700;margin-top:2px;">${d.dayNum}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="week-grid-body">
+            `;
+
+            hours.forEach(hr => {
+                const timeLabel = `${String(hr).padStart(2,'0')}:00`;
+                html += `<div class="time-label-slot">${timeLabel}</div>`;
+
+                days.forEach(d => {
+                    // Find events starting in this hour slot
+                    const hourEvents = allReservations.filter(r => {
+                        if (r.date !== d.dateStr) return false;
+                        const startHr = parseInt(r.start_time.split(':')[0], 10);
+                        return startHr === hr;
+                    });
+
+                    html += `
+                        <div class="week-col-slot" onclick="showCreateReservationModal('${d.dateStr}')">
+                            ${hourEvents.map(ev => {
+                                const colorCls = getLabColorClass(ev.color || ev.lab_id);
+                                return `
+                                    <div class="week-event-card ${colorCls}" onclick="event.stopPropagation(); showReservationDetailModal(${ev.id})">
+                                        <div style="font-weight:700;">${ev.title}</div>
+                                        <div style="font-size:9.5px;opacity:0.9;">${ev.lab_id} · ${ev.start_time}-${ev.end_time}</div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                });
+            });
+
+            html += `
+                    </div>
+                </div>
+            `;
+
+            container.innerHTML = html;
+        }
+
+        // ============ RENDER DAY VIEW ============
+        function renderDayView(container) {
+            const dateStr = `${currentScheduleDate.getFullYear()}-${String(currentScheduleDate.getMonth()+1).padStart(2,'0')}-${String(currentScheduleDate.getDate()).padStart(2,'0')}`;
+            const dayEvents = allReservations.filter(r => r.date === dateStr);
+
+            const hours = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+
+            let html = `
+                <div class="day-view-container">
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 4px;">
+                        <h3 style="font-size:16px;font-weight:700;color:var(--fg);">
+                            Schedule breakdown for ${currentScheduleDate.toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                        </h3>
+                        <span style="font-size:12px;color:var(--accent);font-weight:600;">${dayEvents.length} reservation(s) today</span>
+                    </div>
+            `;
+
+            if (dayEvents.length === 0) {
+                html += `
+                    <div style="text-align:center;padding:60px 20px;background:var(--bg-main);border:1px dashed var(--border);border-radius:var(--radius);">
+                        <i class="fas fa-calendar-check" style="font-size:36px;color:var(--accent);margin-bottom:12px;display:block;"></i>
+                        <h4 style="font-size:15px;color:var(--fg);margin-bottom:6px;">No Lab Reservations Scheduled</h4>
+                        <p style="font-size:13px;color:var(--fg-dim);margin-bottom:16px;">This date is fully open for lab bookings and computer availability.</p>
+                        <button class="btn btn-primary" onclick="showCreateReservationModal('${dateStr}')"><i class="fas fa-plus"></i> Reserve Lab for Today</button>
+                    </div>
+                `;
+            } else {
+                hours.forEach(hr => {
+                    const timeLabel = `${String(hr).padStart(2,'0')}:00`;
+                    const hrEvents = dayEvents.filter(r => {
+                        const startHr = parseInt(r.start_time.split(':')[0], 10);
+                        return startHr === hr;
+                    });
+
+                    if (hrEvents.length > 0) {
+                        html += `
+                            <div class="day-slot-card">
+                                <div class="day-slot-time"><i class="fas fa-clock" style="margin-right:6px;"></i>${timeLabel}</div>
+                                <div class="day-slot-events">
+                                    ${hrEvents.map(ev => {
+                                        const colorCls = getLabColorClass(ev.color || ev.lab_id);
+                                        return `
+                                            <div class="day-event-detail-box ${colorCls}" onclick="showReservationDetailModal(${ev.id})">
+                                                <div>
+                                                    <div class="day-event-info-title">${ev.title}</div>
+                                                    <div class="day-event-info-sub">
+                                                        <span><i class="fas fa-door-open"></i> ${ev.lab_id}</span>
+                                                        <span><i class="fas fa-user"></i> ${ev.reserved_by}</span>
+                                                        <span><i class="fas fa-desktop"></i> ${ev.pc_count} PCs</span>
+                                                        <span><i class="fas fa-clock"></i> ${ev.start_time} - ${ev.end_time}</span>
+                                                    </div>
+                                                </div>
+                                                <div style="display:flex;gap:6px;">
+                                                    <button class="btn btn-ghost" style="padding:6px 12px;font-size:11px;" onclick="event.stopPropagation(); showEditReservationModal(${ev.id})"><i class="fas fa-edit"></i> Edit</button>
+                                                    <button class="btn btn-ghost" style="padding:6px 12px;font-size:11px;" onclick="event.stopPropagation(); showReservationDetailModal(${ev.id})">Details</button>
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+            }
+
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        // ============ CREATE RESERVATION MODAL ============
+        function showCreateReservationModal(prefillDate) {
+            let modal = document.getElementById('createReservationModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'createReservationModal';
+                modal.style.cssText = `
+                    position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+                    background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);`;
+                document.body.appendChild(modal);
+            }
+            modal.style.display = 'flex';
+            modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+            const defaultDate = prefillDate || `${currentScheduleDate.getFullYear()}-${String(currentScheduleDate.getMonth()+1).padStart(2,'0')}-${String(currentScheduleDate.getDate()).padStart(2,'0')}`;
+
+            modal.innerHTML = `
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);
+                            width:90%;max-width:600px;padding:28px;box-shadow:var(--shadow);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h2 style="font-size:18px;font-weight:700;color:var(--fg);">
+                            <i class="fas fa-calendar-plus" style="color:var(--accent);margin-right:8px;"></i>Create Lab Reservation
+                        </h2>
+                        <button onclick="document.getElementById('createReservationModal').style.display='none'" style="background:none;border:none;color:var(--fg-dim);font-size:20px;cursor:pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <form id="reservationForm" onsubmit="handleCreateReservation(event)" style="display:flex;flex-direction:column;gap:14px;">
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Reservation Title / Course Name *</label>
+                            <input type="text" id="resTitle" required placeholder="e.g. CS201 Data Structures Lab" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Lab / Computer Room *</label>
+                                <select id="resLab" required style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                                    <option value="Lab A (CS101)">Lab A (CS101)</option>
+                                    <option value="Lab B (CS102)">Lab B (CS102)</option>
+                                    <option value="Lab C (CS103)">Lab C (CS103)</option>
+                                    <option value="AI Research Lab">AI Research Lab</option>
+                                    <option value="VR & Network Lab">VR & Network Lab</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Reserved By / Instructor *</label>
+                                <input type="text" id="resReservedBy" required value="Admin Kumar" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Date *</label>
+                                <input type="date" id="resDate" required value="${defaultDate}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                            </div>
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Start Time *</label>
+                                <input type="time" id="resStartTime" required value="09:00" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                            </div>
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">End Time *</label>
+                                <input type="time" id="resEndTime" required value="11:30" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Reserved PC Count</label>
+                                <input type="number" id="resPcCount" value="16" min="1" max="48" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                            </div>
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Color Theme Tag</label>
+                                <select id="resColor" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                                    <option value="laba">Sky Blue (Lab A)</option>
+                                    <option value="labb">Emerald Green (Lab B)</option>
+                                    <option value="labc">Purple (Lab C)</option>
+                                    <option value="ailab">Amber (AI Lab)</option>
+                                    <option value="vrlab">Rose Red (VR Lab)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Description / Course Notes</label>
+                            <textarea id="resDesc" rows="3" placeholder="Additional information or requirements..." style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;resize:vertical;"></textarea>
+                        </div>
+
+                        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px;">
+                            <button type="button" class="btn btn-ghost" onclick="document.getElementById('createReservationModal').style.display='none'">Cancel</button>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Save Reservation</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+
+        async function handleCreateReservation(e) {
+            e.preventDefault();
+            const body = {
+                title: document.getElementById('resTitle').value,
+                lab_id: document.getElementById('resLab').value,
+                reserved_by: document.getElementById('resReservedBy').value,
+                date: document.getElementById('resDate').value,
+                start_time: document.getElementById('resStartTime').value,
+                end_time: document.getElementById('resEndTime').value,
+                pc_count: parseInt(document.getElementById('resPcCount').value, 10) || 16,
+                color: document.getElementById('resColor').value,
+                description: document.getElementById('resDesc').value
+            };
+
+            const resp = await postJSON('/api/reservations', body);
+            if (resp && resp.status === 'ok') {
+                showToast('Reservation created successfully!');
+                document.getElementById('createReservationModal').style.display = 'none';
+                const pageView = document.getElementById('pageView');
+                if (pageView) renderScheduleManager(pageView);
+            } else {
+                showToast('Error creating reservation');
+            }
+        }
+
+        // ============ EVENT DETAIL & DELETION MODAL ============
+        function showReservationDetailModal(resId) {
+            const ev = allReservations.find(r => r.id === resId);
+            if (!ev) return;
+
+            let modal = document.getElementById('reservationDetailModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'reservationDetailModal';
+                modal.style.cssText = `
+                    position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+                    background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);`;
+                document.body.appendChild(modal);
+            }
+            modal.style.display = 'flex';
+            modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+            const colorCls = getLabColorClass(ev.color || ev.lab_id);
+
+            modal.innerHTML = `
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);
+                            width:90%;max-width:550px;padding:28px;box-shadow:var(--shadow);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                        <span class="${colorCls}" style="padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;">${ev.lab_id}</span>
+                        <button onclick="document.getElementById('reservationDetailModal').style.display='none'" style="background:none;border:none;color:var(--fg-dim);font-size:20px;cursor:pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <h2 style="font-size:20px;font-weight:700;color:var(--fg);margin-bottom:14px;">${ev.title}</h2>
+
+                    <div style="background:var(--bg-main);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;">
+                        <div><strong style="color:var(--fg-dim);">Instructor:</strong> <br><span style="color:var(--fg);font-weight:600;">${ev.reserved_by}</span></div>
+                        <div><strong style="color:var(--fg-dim);">Date:</strong> <br><span style="color:var(--fg);font-weight:600;">${ev.date}</span></div>
+                        <div><strong style="color:var(--fg-dim);">Time Slot:</strong> <br><span style="color:var(--accent);font-weight:700;font-family:'JetBrains Mono';">${ev.start_time} - ${ev.end_time}</span></div>
+                        <div><strong style="color:var(--fg-dim);">Computers Reserved:</strong> <br><span style="color:var(--fg);font-weight:600;">${ev.pc_count} PCs</span></div>
+                    </div>
+
+                    ${ev.description ? `
+                        <div style="margin-bottom:20px;">
+                            <h4 style="font-size:12px;font-weight:700;color:var(--fg-dim);text-transform:uppercase;margin-bottom:6px;">Description & Notes</h4>
+                            <p style="font-size:13px;color:var(--fg-muted);line-height:1.6;background:var(--bg-main);padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border);">${ev.description}</p>
+                        </div>
+                    ` : ''}
+
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;">
+                        <button class="btn btn-ghost" style="color:var(--danger);" onclick="deleteReservationConfirm(${ev.id})">
+                            <i class="fas fa-trash-alt"></i> Cancel Reservation
+                        </button>
+                        <div style="display:flex;gap:8px;">
+                            <button class="btn btn-primary" onclick="showEditReservationModal(${ev.id})">
+                                <i class="fas fa-edit"></i> Edit Schedule
+                            </button>
+                            <button class="btn btn-ghost" onclick="document.getElementById('reservationDetailModal').style.display='none'">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showEditReservationModal(resId) {
+            const ev = allReservations.find(r => r.id === resId);
+            if (!ev) return;
+
+            const detailModal = document.getElementById('reservationDetailModal');
+            if (detailModal) detailModal.style.display = 'none';
+
+            let modal = document.getElementById('editReservationModal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'editReservationModal';
+                modal.style.cssText = `
+                    position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;
+                    background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);`;
+                document.body.appendChild(modal);
+            }
+            modal.style.display = 'flex';
+            modal.onclick = (e) => { if (e.target === modal) modal.style.display = 'none'; };
+
+            modal.innerHTML = `
+                <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);
+                            width:90%;max-width:600px;padding:28px;box-shadow:var(--shadow);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+                        <h2 style="font-size:18px;font-weight:700;color:var(--fg);">
+                            <i class="fas fa-edit" style="color:var(--accent);margin-right:8px;"></i>Edit Lab Schedule
+                        </h2>
+                        <button onclick="document.getElementById('editReservationModal').style.display='none'" style="background:none;border:none;color:var(--fg-dim);font-size:20px;cursor:pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <form id="editReservationForm" onsubmit="handleUpdateReservation(event, ${ev.id})" style="display:flex;flex-direction:column;gap:14px;">
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Reservation Title / Course Name *</label>
+                            <input type="text" id="editResTitle" required value="${ev.title || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Lab / Computer Room *</label>
+                                <select id="editResLab" required style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                                    <option value="Lab A (CS101)" ${ev.lab_id === 'Lab A (CS101)' ? 'selected' : ''}>Lab A (CS101)</option>
+                                    <option value="Lab B (CS102)" ${ev.lab_id === 'Lab B (CS102)' ? 'selected' : ''}>Lab B (CS102)</option>
+                                    <option value="Lab C (CS103)" ${ev.lab_id === 'Lab C (CS103)' ? 'selected' : ''}>Lab C (CS103)</option>
+                                    <option value="AI Research Lab" ${ev.lab_id === 'AI Research Lab' ? 'selected' : ''}>AI Research Lab</option>
+                                    <option value="VR & Network Lab" ${ev.lab_id === 'VR & Network Lab' ? 'selected' : ''}>VR & Network Lab</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Reserved By / Instructor *</label>
+                                <input type="text" id="editResReservedBy" required value="${ev.reserved_by || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Date *</label>
+                                <input type="date" id="editResDate" required value="${ev.date || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                            </div>
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Start Time *</label>
+                                <input type="time" id="editResStartTime" required value="${ev.start_time || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                            </div>
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">End Time *</label>
+                                <input type="time" id="editResEndTime" required value="${ev.end_time || ''}" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                            </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Reserved PC Count</label>
+                                <input type="number" id="editResPcCount" value="${ev.pc_count || 16}" min="1" max="48" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                            </div>
+                            <div>
+                                <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Color Theme Tag</label>
+                                <select id="editResColor" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;">
+                                    <option value="laba" ${ev.color === 'laba' ? 'selected' : ''}>Sky Blue (Lab A)</option>
+                                    <option value="labb" ${ev.color === 'labb' ? 'selected' : ''}>Emerald Green (Lab B)</option>
+                                    <option value="labc" ${ev.color === 'labc' ? 'selected' : ''}>Purple (Lab C)</option>
+                                    <option value="ailab" ${ev.color === 'ailab' ? 'selected' : ''}>Amber (AI Lab)</option>
+                                    <option value="vrlab" ${ev.color === 'vrlab' ? 'selected' : ''}>Rose Red (VR Lab)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style="font-size:12px;font-weight:600;color:var(--fg-muted);display:block;margin-bottom:4px;">Description / Course Notes</label>
+                            <textarea id="editResDesc" rows="3" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg-main);color:var(--fg);font-family:'Space Grotesk',sans-serif;font-size:13px;resize:vertical;">${ev.description || ''}</textarea>
+                        </div>
+
+                        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:10px;">
+                            <button type="button" class="btn btn-ghost" onclick="document.getElementById('editReservationModal').style.display='none'">Cancel</button>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        }
+
+        async function handleUpdateReservation(e, resId) {
+            e.preventDefault();
+            const body = {
+                title: document.getElementById('editResTitle').value,
+                lab_id: document.getElementById('editResLab').value,
+                reserved_by: document.getElementById('editResReservedBy').value,
+                date: document.getElementById('editResDate').value,
+                start_time: document.getElementById('editResStartTime').value,
+                end_time: document.getElementById('editResEndTime').value,
+                pc_count: parseInt(document.getElementById('editResPcCount').value, 10) || 16,
+                color: document.getElementById('editResColor').value,
+                description: document.getElementById('editResDesc').value
+            };
+
+            try {
+                const resp = await fetch(`/api/reservations/${resId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const json = await resp.json();
+                if (json && json.status === 'ok') {
+                    showToast('Schedule updated successfully!');
+                    document.getElementById('editReservationModal').style.display = 'none';
+                    const pageView = document.getElementById('pageView');
+                    if (pageView) renderScheduleManager(pageView);
+                } else {
+                    showToast('Error updating schedule');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Failed to update schedule');
+            }
+        }
+
+        async function deleteReservationConfirm(resId) {
+            if (!confirm("Are you sure you want to cancel this reservation?")) return;
+
+            try {
+                const resp = await fetch(`/api/reservations/${resId}`, { method: 'DELETE' });
+                const json = await resp.json();
+                if (json && json.status === 'ok') {
+                    showToast('Reservation canceled successfully');
+                    document.getElementById('reservationDetailModal').style.display = 'none';
+                    const pageView = document.getElementById('pageView');
+                    if (pageView) renderScheduleManager(pageView);
+                } else {
+                    showToast('Error canceling reservation');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Failed to cancel reservation');
+            }
+        }
+
+        // ============ UPDATE LAB SELECTOR ============
+        function updateLabSelector() {
+            const selector = document.getElementById('labSelector');
+            if (!selector || allMachines.length === 0) return;
+            const prefixes = [...new Set(allMachines.map(m => m.machine_id.replace(/[0-9-]+$/, '')))].filter(p => p);
+            const currentVal = selector.value;
+            selector.innerHTML = `<option value="all">All Machines (${allMachines.length})</option>`;
+            prefixes.forEach(p => {
+                const count = allMachines.filter(m => m.machine_id.startsWith(p)).length;
+                selector.innerHTML += `<option value="${p}">${p} (${count} PCs)</option>`;
+            });
+            selector.value = currentVal;
+        }
+
+        // ============ POLLING INTERVALS ============
+        setInterval(() => {
+            fetchMachines();
+            updateCPUChart();
+        }, 5000);
+
+        setInterval(() => {
+            fetchAlerts();
+            renderActivities();
+        }, 10000);
+
+        setInterval(() => {
+            postJSON('/api/machines/check-offline');
+        }, 30000);
+
+        setInterval(fetchDashboardSummary, 5000);
+
+        // ============ INIT ============
+        document.addEventListener('DOMContentLoaded', async () => {
+            initCPUChart();
+            initDonutChart();
+            await fetchDashboardSummary();
+            await fetchMachines();
+            await fetchAlerts();
+            await renderActivities();
+            updateLabSelector();
+        });
+    </script>
+
+</body>
+
+</html>
+
