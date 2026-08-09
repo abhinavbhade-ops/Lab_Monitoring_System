@@ -1,0 +1,34 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyc
+*$py.class
+
+# Database
+lab_monitor.db
+lab_monitor.db-journal
+lab_monitor.db-wal
+lab_monitor.db-shm
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+.qodo/
+
+# Node
+node_modules/
+dist/
+*.log
+
+# Env files
+.env
+.env.local
+
+# OS
+.DS_Store
