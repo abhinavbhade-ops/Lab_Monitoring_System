@@ -1,16 +1,17 @@
-# [Project Title]
+# Lab Monitoring System
 
-**Team ID:** CX025
+
 **Team Name:** Alpha Bugbusters
 
 ## Team Members
-- [Member 1 Name] – [Role]
-- [Member 2 Name] – [Role]
-- [Member 3 Name] – [Role]
-- [Member 4 Name] – [Role]
+- Om Doble      – Team Lead
+- Abhinav Bhade – Backend
+- Rajas Wanjari – Backend
+- Bilal Khan    – Frontend
 
-## Problem Statement
-[Describe the problem statement your team is solving]
+
+
+
 
 ## Tech Stack
 - Frontend: React (Vite)
@@ -19,9 +20,9 @@
 - Other: [APIs, libraries, tools used]
 
 ## Features
-- [Feature 1]
-- [Feature 2]
-- [Feature 3]
+- Fetches and displays Real-Time status condition of pc
+- One time setup
+- Date Wise Allotment System
 
 ## Installation
 
@@ -52,6 +53,3 @@ npm run dev
 cd backend
 uvicorn src.main:app --reload
 ```
-
-> This README is a shared template for all CODEX Hackfest 2026 teams.
-> Fill in the bracketed placeholders above with your project's real details.
