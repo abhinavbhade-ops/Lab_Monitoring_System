@@ -12,7 +12,6 @@
 
 
 
-
 ## Tech Stack
 - Frontend: React (Vite)
 - Backend: FastAPI (Python)
